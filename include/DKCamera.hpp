@@ -12,6 +12,12 @@
 #ifndef DKSAVE_DKCAMERA_HPP
 #define DKSAVE_DKCAMERA_HPP
 
+#include <k4a/k4a.hpp>
+#include <windows.h>
+#include <shlwapi.h>
+
+#include "logger.hpp"
+
 
 struct DKCamera
 {

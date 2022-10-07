@@ -67,7 +67,7 @@ namespace kerbal
 	{
 
 #   ifdef NDEBUG
-		if (level == DEBUG) {
+		if (level == KDEBUG) {
 			return;
 		}
 #   endif

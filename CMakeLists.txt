@@ -15,4 +15,10 @@ target_link_libraries(dksave PUBLIC "k4a.lib")
 
 target_include_directories(dksave PUBLIC "E:/opencv/build/include/")
 target_link_directories(dksave PUBLIC "E:/opencv/build/x64/vc15/lib/")
-target_link_libraries(dksave PUBLIC "opencv_world420d.lib")
+
+message(${CMAKE_BUILD_TYPE})
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+	target_link_libraries(dksave PUBLIC "opencv_world420d.lib")
+else()
+	target_link_libraries(dksave PUBLIC "opencv_world420.lib")
+endif()

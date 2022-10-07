@@ -25,11 +25,11 @@
 
 static void destribe_image(const k4a::image & img, const char type[])
 {
-	KERBAL_LOG_WRITE(DEBUG, "[{}]", type);
-	KERBAL_LOG_WRITE(DEBUG, "format: {}", img.get_format());
-	KERBAL_LOG_WRITE(DEBUG, "device_timestamp: {}", img.get_device_timestamp().count());
-	KERBAL_LOG_WRITE(DEBUG, "system_timestamp: {}", img.get_system_timestamp().count());
-	KERBAL_LOG_WRITE(DEBUG, "height: {}, width: {}", img.get_height_pixels(), img.get_width_pixels());
+	KERBAL_LOG_WRITE(KDEBUG, "[{}]", type);
+	KERBAL_LOG_WRITE(KDEBUG, "format: {}", img.get_format());
+	KERBAL_LOG_WRITE(KDEBUG, "device_timestamp: {}", img.get_device_timestamp().count());
+	KERBAL_LOG_WRITE(KDEBUG, "system_timestamp: {}", img.get_system_timestamp().count());
+	KERBAL_LOG_WRITE(KDEBUG, "height: {}, width: {}", img.get_height_pixels(), img.get_width_pixels());
 }
 
 static cv::Mat rgb(const k4a::capture & capture)
@@ -159,8 +159,15 @@ static void camera_working_thread(DKCamera & camera)
 	int count = 0;
 	while (true) {
 		k4a::capture capture;
-		// if (!device.get_capture(&capture, std::chrono::milliseconds(0)))
-		if (!camera.device.get_capture(&capture)) {
+		// device.get_capture(&capture, std::chrono::milliseconds(0))
+
+		try {
+			bool capture_result = camera.device.get_capture(&capture);
+			if (!capture_result) {
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
+				continue;
+			}
+		} catch (...) {
 			KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
 			continue;
 		}
@@ -175,14 +182,14 @@ static void camera_working_thread(DKCamera & camera)
 		try {
 			save_cv_mat(cv_rgbImage_no_alpha, filename_rgb);
 		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: rgb save failed: {}", camera.device_id, filename_rgb);
+			KERBAL_LOG_WRITE(KERROR, "Camera {}: rgb save failed: {}", camera.device_id, filename_rgb.string());
 		}
 
 		std::filesystem::path filename_depth = depth_path2_base / date / (timestamp + ".jpg");
 		try {
 			save_cv_mat(cv_depth, filename_depth);
 		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth);
+			KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
 		}
 
 		//imwrite(folderPath2+ filename_d2, cv_depth_8U);
@@ -251,7 +258,7 @@ int main(int argc, char * argv[])
 
 	std::vector<std::thread> threads(cameras.size());
 	for (size_t i = 0; i < cameras.size(); ++i) {
-		threads[i] = std::thread(camera_working_thread, cameras[i]);
+		threads[i] = std::thread(camera_working_thread, std::ref(cameras[i]));
 	}
 
 	for (std::thread & thread : threads) {
