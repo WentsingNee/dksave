@@ -21,32 +21,32 @@
 inline
 std::string current_date()
 {
-	std::time_t now = std::time(NULL);
-	std::tm * localtime = std::localtime(&now);
-
+	SYSTEMTIME time;
+	GetLocalTime(&time);
 	return fmt::format("{:4}-{:02}-{:02}",
-					   1900 + localtime->tm_year, 1 + localtime->tm_mon, localtime->tm_mday);
+		time.wYear, time.wMonth, time.wDay
+	);
 }
 
 inline
 std::string current_time()
 {
-	std::time_t now = std::time(NULL);
-	std::tm * localtime = std::localtime(&now);
-
+	SYSTEMTIME time;
+	GetLocalTime(&time);
 	return fmt::format("{:4}-{:02}-{:02} {:02}:{:02}:{:02}",
-					   1900 + localtime->tm_year, 1 +localtime->tm_mon, localtime->tm_mday,
-					   localtime->tm_hour, localtime->tm_min, localtime->tm_sec);
+		time.wYear, time.wMonth, time.wDay,
+		time.wHour, time.wMinute, time.wSecond
+	);
 }
 
 inline
 std::string current_timestamp()
 {
-	SYSTEMTIME lpsystime1;
-	GetLocalTime(&lpsystime1);
-	return fmt::format("{:4}-{:2}-{:2}_{:2}-{:2}-{:2}-{:3}",
-					   lpsystime1.wYear, lpsystime1.wMonth, lpsystime1.wDay,
-					   lpsystime1.wHour, lpsystime1.wMinute, lpsystime1.wSecond, lpsystime1.wMilliseconds
+	SYSTEMTIME time;
+	GetLocalTime(&time);
+	return fmt::format("{:4}-{:02}-{:02}_{:02}-{:02}-{:02}-{:03}",
+		time.wYear, time.wMonth, time.wDay,
+		time.wHour, time.wMinute, time.wSecond, time.wMilliseconds
    );
 }
 

@@ -75,7 +75,7 @@ struct DKCamera
 inline k4a_device_configuration_t get_config_0()
 {
 	// 配置
-	static k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 	config.camera_fps = K4A_FRAMES_PER_SECOND_30;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
 
@@ -95,7 +95,7 @@ inline k4a_device_configuration_t get_config_0()
 
 inline k4a_device_configuration_t get_config_1()
 {
-	static k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 	config.camera_fps = K4A_FRAMES_PER_SECOND_15;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
 
