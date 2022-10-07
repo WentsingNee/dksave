@@ -15,6 +15,7 @@
 #include <iostream>
 #include <chrono>
 #include <ctime>
+#include <mutex>
 
 #include <fmt/format.h>
 
@@ -26,11 +27,11 @@
  */
 enum log_level
 {
-		DEBUG = 0, ///< DEBUG 等级供调试使用，只在 DEBUG 模式下有效
-		INFO, ///< INFO 等级，用于输出一些必要信息
-		WARNING, ///< WARNING 等级，警告
-		EROR, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
-		FATAL, ///< FATAL 等级，表示极为严重的错误，程序发生了崩溃退出
+		KDEBUG = 0, ///< DEBUG 等级供调试使用，只在 DEBUG 模式下有效
+		KINFO = 1, ///< INFO 等级，用于输出一些必要信息
+		KWARNING = 2, ///< WARNING 等级，警告
+		KERROR = 3, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
+		KFATAL = 4, ///< FATAL 等级，表示极为严重的错误，程序发生了崩溃退出
 };
 
 namespace kerbal
@@ -40,19 +41,19 @@ namespace kerbal
 	const char * log_level_description(log_level level)
 	{
 		switch (level) {
-			case log_level::DEBUG: {
+			case log_level::KDEBUG: {
 				return "[DEBUG]";
 			}
-			case log_level::INFO: {
+			case log_level::KINFO: {
 				return "[INFO]";
 			}
-			case log_level::WARNING: {
+			case log_level::KWARNING: {
 				return "[WARNING]";
 			}
-			case log_level::EROR: {
+			case log_level::KERROR: {
 				return "[ERROR]";
 			}
-			case log_level::FATAL: {
+			case log_level::KFATAL: {
 				return "[FATAL]";
 			}
 			default: {
@@ -71,12 +72,17 @@ namespace kerbal
 		}
 #   endif
 
-		out
-				<< fmt::format("{}  {:9}  {}:{}  {}",
-							   current_time(),
-							   log_level_description(level),
-							   src_file, line, std::move(info))
-				<< std::endl;
+		std::string s = fmt::format("{}  {:9}  {}:{}  {}",
+									   current_time(),
+									   log_level_description(level),
+									   src_file, line, std::move(info));
+
+		static std::mutex write_mtx;
+
+		{
+			std::lock_guard<std::mutex> guard(write_mtx);
+			out << s << std::endl;
+		}
 	}
 
 
