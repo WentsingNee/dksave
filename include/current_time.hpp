@@ -14,6 +14,7 @@
 
 #include <string>
 #include <ctime>
+#include <windows.h>
 
 #include <fmt/format.h>
 
@@ -24,7 +25,7 @@ std::string current_date()
 	std::tm * localtime = std::localtime(&now);
 
 	return fmt::format("{:4}-{:02}-{:02}",
-					   1900 + localtime->tm_year, localtime->tm_mon, localtime->tm_mday);
+					   1900 + localtime->tm_year, 1 + localtime->tm_mon, localtime->tm_mday);
 }
 
 inline
@@ -34,7 +35,7 @@ std::string current_time()
 	std::tm * localtime = std::localtime(&now);
 
 	return fmt::format("{:4}-{:02}-{:02} {:02}:{:02}:{:02}",
-					   1900 + localtime->tm_year, localtime->tm_mon, localtime->tm_mday,
+					   1900 + localtime->tm_year, 1 +localtime->tm_mon, localtime->tm_mday,
 					   localtime->tm_hour, localtime->tm_min, localtime->tm_sec);
 }
 
@@ -43,10 +44,10 @@ std::string current_timestamp()
 {
 	SYSTEMTIME lpsystime1;
 	GetLocalTime(&lpsystime1);
-	char szTimeString1[30];
-	sprintf_s(szTimeString1, "%04d-%02d-%02d_%02d-%02d-%02d-%03d", lpsystime1.wYear, lpsystime1.wMonth,
-			  lpsystime1.wDay, lpsystime1.wHour, lpsystime1.wMinute, lpsystime1.wSecond, lpsystime1.wMilliseconds);
-	return szTimeString1;
+	return fmt::format("{:4}-{:2}-{:2}_{:2}-{:2}-{:2}-{:3}",
+					   lpsystime1.wYear, lpsystime1.wMonth, lpsystime1.wDay,
+					   lpsystime1.wHour, lpsystime1.wMinute, lpsystime1.wSecond, lpsystime1.wMilliseconds
+   );
 }
 
 #endif // DKSAVE_CURRENT_TIME_HPP

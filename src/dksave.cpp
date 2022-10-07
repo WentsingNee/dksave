@@ -41,7 +41,7 @@ static cv::Mat rgb(const k4a::capture & capture)
 	k4a::image rgbImage = capture.get_color_image();
 	destribe_image(rgbImage, "rgb");
 
-	cv::Mat cv_rgbImage_with_alpha(rgbImage.get_height_pixels(), rgbImage.get_width_pixels(), CV_8UC4, (void *) rgbImage.get_buffer());
+	cv::Mat cv_rgbImage_with_alpha(rgbImage.get_height_pixels(), rgbImage.get_width_pixels(), CV_8UC4, rgbImage.get_buffer());
 
 	cv::Mat cv_rgbImage_no_alpha;
 	cv::cvtColor(cv_rgbImage_with_alpha, cv_rgbImage_no_alpha, cv::COLOR_BGRA2BGR);
@@ -74,7 +74,7 @@ static void ir(const k4a::capture & capture)
 	k4a::image irImage = capture.get_ir_image();
 	destribe_image(irImage, "ir");
 
-	cv::Mat cv_irImage(irImage.get_height_pixels(), irImage.get_width_pixels(), CV_16U, (void *) irImage.get_buffer());
+	cv::Mat cv_irImage(irImage.get_height_pixels(), irImage.get_width_pixels(), CV_16U, irImage.get_buffer());
 	cv::Mat cv_irImage_8U;
 	cv_irImage.convertTo(cv_irImage_8U, CV_8U, 1);
 }
@@ -106,33 +106,29 @@ static void ir(const k4a::capture & capture)
 //cv_irImage.convertTo(cv_irImage_8U, CV_8U, 1);
 //cv::imshow("depth", cv_depth_8U);
 
-/*
-static void depth_to_rgb_mode(k4a::device & device, size_t device_id, const k4a::capture & capture)
+
+static cv::Mat depth_to_rgb_mode(const DKCamera & camera, const k4a::capture & capture)
 {
-	k4a_device_configuration_t config;
 	// 深度转RGB模式
-	k4a::calibration k4aCalibration = device.get_calibration(config.depth_mode,
-															 config.color_resolution);// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
+	k4a::calibration k4aCalibration = camera.device.get_calibration(camera.config.depth_mode,
+															 camera.config.color_resolution);// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
 
 	k4a::transformation k4aTransformation = k4a::transformation(k4aCalibration);
 
-	k4a::image rgbImage = capture.get_color_image();
 	k4a::image depthImage = capture.get_depth_image();
 	k4a::image transformed_depthImage = k4aTransformation.depth_image_to_color_camera(depthImage);
-	cv::Mat cv_rgbImage_with_alpha(rgbImage.get_height_pixels(), rgbImage.get_width_pixels(), CV_8UC4,
-								   (void *) rgbImage.get_buffer());
-	cv::cvtColor(cv_rgbImage_with_alpha, cv_rgbImage_no_alpha, cv::COLOR_BGRA2BGR);
 	cv::Mat cv_depth(transformed_depthImage.get_height_pixels(), transformed_depthImage.get_width_pixels(), CV_16U,
-					   (void *) transformed_depthImage.get_buffer(), static_cast<size_t>(transformed_depthImage.get_stride_bytes()));
+					 transformed_depthImage.get_buffer(), static_cast<size_t>(transformed_depthImage.get_stride_bytes()));
 
 
-	cv::Mat dst;
-	cv::convertScaleAbs(cv_depth, dst, 0.08);
-	cv::applyColorMap(dst, cv_depth_8U, cv::COLORMAP_JET);
+//	cv::Mat dst;
+//	cv::convertScaleAbs(cv_depth, dst, 0.08);
+//	cv::applyColorMap(dst, cv_depth_8U, cv::COLORMAP_JET);
 	//cv::imshow("depth", cv_depth_8U);
 
+	return cv_depth
 }
-*/
+
 
 static void save_cv_mat(const cv::Mat & mat, const std::filesystem::path & path)
 {
@@ -153,8 +149,8 @@ static void camera_working_thread(DKCamera & camera)
 {
 	std::filesystem::path camera_working_dir = working_dir / ("camera" + std::to_string(camera.device_id));
 
-	std::filesystem::path depth_path_base = camera_working_dir / "depth1";
-	std::filesystem::path depth_path2_base = camera_working_dir / "depth2";
+	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
+	std::filesystem::path path_base_depth = camera_working_dir / "depth";
 
 	int count = 0;
 	while (true) {
@@ -173,29 +169,27 @@ static void camera_working_thread(DKCamera & camera)
 		}
 
 		cv::Mat cv_rgbImage_no_alpha = rgb(capture);
-		cv::Mat cv_depth = depth(capture);
+		cv::Mat cv_depth = depth_to_rgb_mode(camera, capture);
 
 		std::string date = current_date();
 		std::string timestamp = current_timestamp();
 
-		std::filesystem::path filename_rgb = depth_path_base / date / (timestamp + ".png");
+		std::filesystem::path filename_rgb = path_base_rgb / date / (timestamp + ".png");
 		try {
 			save_cv_mat(cv_rgbImage_no_alpha, filename_rgb);
 		} catch (...) {
 			KERBAL_LOG_WRITE(KERROR, "Camera {}: rgb save failed: {}", camera.device_id, filename_rgb.string());
 		}
 
-		std::filesystem::path filename_depth = depth_path2_base / date / (timestamp + ".jpg");
+		std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".jpg");
 		try {
 			save_cv_mat(cv_depth, filename_depth);
 		} catch (...) {
 			KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
 		}
 
-		//imwrite(folderPath2+ filename_d2, cv_depth_8U);
-
 		count++;
-		KERBAL_LOG_WRITE(KDEBUG, "Camera {}: Frame {} handle done.", camera.device_id, count);
+		KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handle done.", camera.device_id, count);
 
 		cv::waitKey(1);
 

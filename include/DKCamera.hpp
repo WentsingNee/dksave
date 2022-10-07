@@ -24,9 +24,14 @@ struct DKCamera
 		k4a::device device;
 		int device_id;
 		k4a_device_configuration_t config;
+		bool enable = true;
 
 		void start()
 		{
+			if (!enable) {
+				return;
+			}
+
 			device.start_cameras(&config);
 			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", device_id);
 		}
@@ -34,6 +39,10 @@ struct DKCamera
 		// 稳定化
 		void stable()
 		{
+			if (!enable) {
+				return;
+			}
+
 			k4a::capture capture;
 			int success = 0;//用来稳定，类似自动曝光
 			int failed = 0;// 统计自动曝光的失败次数
