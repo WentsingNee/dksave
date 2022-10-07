@@ -29,7 +29,7 @@ enum log_level
 		DEBUG = 0, ///< DEBUG 等级供调试使用，只在 DEBUG 模式下有效
 		INFO, ///< INFO 等级，用于输出一些必要信息
 		WARNING, ///< WARNING 等级，警告
-		ERROR, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
+		EROR, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
 		FATAL, ///< FATAL 等级，表示极为严重的错误，程序发生了崩溃退出
 };
 
@@ -49,7 +49,7 @@ namespace kerbal
 			case log_level::WARNING: {
 				return "[WARNING]";
 			}
-			case log_level::ERROR: {
+			case log_level::EROR: {
 				return "[ERROR]";
 			}
 			case log_level::FATAL: {

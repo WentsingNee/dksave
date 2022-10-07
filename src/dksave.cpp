@@ -6,12 +6,7 @@
  */
 
 #include <iostream>
-#include <fstream>
 #include <vector>
-#include <iomanip>
-#include <sstream>
-#include <ratio>
-#include <chrono>
 #include <ctime>
 #include <filesystem>
 
@@ -26,10 +21,10 @@
 #include "logger.hpp"
 
 
-static void configure_and_start_camara1(k4a::device & device, size_t device_id)
+static void config_and_start_0(k4a::device & device, size_t device_id)
 {
-	// 配置并启动设备
-	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+	// 配置
+	static k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 	config.camera_fps = K4A_FRAMES_PER_SECOND_30;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
 
@@ -43,14 +38,14 @@ static void configure_and_start_camara1(k4a::device & device, size_t device_id)
 
 	config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
 
-	KERBAL_LOG_WRITE(INFO, "Done: start camera.");
+	device.start_cameras(&config);
+	KERBAL_LOG_WRITE(INFO, "Start camera {}.", device_id);
 }
 
 
-static void configure_and_start_camara(k4a::device & device, size_t device_id)
+static void config_and_start_1(k4a::device & device, size_t device_id)
 {
-	// 配置并启动设备
-	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+	static k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 	config.camera_fps = K4A_FRAMES_PER_SECOND_15;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
 
@@ -65,7 +60,7 @@ static void configure_and_start_camara(k4a::device & device, size_t device_id)
 	config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
 
 	device.start_cameras(&config);
-	KERBAL_LOG_WRITE(INFO, "Done: start camera.");
+	KERBAL_LOG_WRITE(INFO, "Start camera {}.", device_id);
 }
 
 static void stable(k4a::device & device, size_t device_id)
@@ -105,13 +100,13 @@ static void prepare_working_dir()
 static void destribe_image(const k4a::image & img, const char type[])
 {
 	KERBAL_LOG_WRITE(DEBUG, "[{}]", type);
-	KERBAL_LOG_WRITE(DEBUG, "format: {}\n", rgbImage.get_format());
-	KERBAL_LOG_WRITE(DEBUG, "device_timestamp: {}\n", rgbImage.get_device_timestamp().count());
-	KERBAL_LOG_WRITE(DEBUG, "system_timestamp: {}\n", rgbImage.get_system_timestamp().count());
-	KERBAL_LOG_WRITE(DEBUG, "height: {}, width: {}\n", rgbImage.get_height_pixels(), rgbImage.get_width_pixels());
+	KERBAL_LOG_WRITE(DEBUG, "format: {}\n", img.get_format());
+	KERBAL_LOG_WRITE(DEBUG, "device_timestamp: {}\n", img.get_device_timestamp().count());
+	KERBAL_LOG_WRITE(DEBUG, "system_timestamp: {}\n", img.get_system_timestamp().count());
+	KERBAL_LOG_WRITE(DEBUG, "height: {}, width: {}\n", img.get_height_pixels(), img.get_width_pixels());
 }
 
-static cv::Mat rgb(k4a::capture & capture)
+static cv::Mat rgb(const k4a::capture & capture)
 {
 	// rgb
 	// * Each pixel of BGRA32 data is four bytes. The first three bytes represent Blue, Green,
@@ -139,7 +134,7 @@ static cv::Mat depth(k4a::capture & capture)
 
 	cv::Mat cv_depth(depthImage.get_height_pixels(), depthImage.get_width_pixels(), CV_16U, depthImage.get_buffer());
 	cv::Mat cv_depth_8U;
-	normalize(cv_depth, cv_depth_8U, 0, 256 * 256, NORM_MINMAX);
+	normalize(cv_depth, cv_depth_8U, 0, 256 * 256, cv::NORM_MINMAX);
 	cv_depth.convertTo(cv_depth_8U, CV_8U);
 
 	return cv_depth;
@@ -185,14 +180,17 @@ static void ir(k4a::capture & capture)
 //cv_irImage.convertTo(cv_irImage_8U, CV_8U, 1);
 //cv::imshow("depth", cv_depth_8U);
 
-
-static void depth_to_rgb_mode(k4a::device & device, size_t device_id)
+/*
+static void depth_to_rgb_mode(k4a::device & device, size_t device_id, const k4a::capture & capture)
 {
+	k4a_device_configuration_t config;
 	// 深度转RGB模式
 	k4a::calibration k4aCalibration = device.get_calibration(config.depth_mode,
 															 config.color_resolution);// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
 
 	k4a::transformation k4aTransformation = k4a::transformation(k4aCalibration);
+
+	k4a::image rgbImage = capture.get_color_image();
 	k4a::image depthImage = capture.get_depth_image();
 	k4a::image transformed_depthImage = k4aTransformation.depth_image_to_color_camera(depthImage);
 	cv::Mat cv_rgbImage_with_alpha(rgbImage.get_height_pixels(), rgbImage.get_width_pixels(), CV_8UC4,
@@ -204,77 +202,46 @@ static void depth_to_rgb_mode(k4a::device & device, size_t device_id)
 
 	cv::Mat dst;
 	cv::convertScaleAbs(cv_depth, dst, 0.08);
-	cv::applyColorMap(dst, cv_depth_8U, COLORMAP_JET);
+	cv::applyColorMap(dst, cv_depth_8U, cv::COLORMAP_JET);
 	//cv::imshow("depth", cv_depth_8U);
 
 }
+*/
 
-int main(int argc, char * argv[])
+
+void camera_working_thread(k4a::device& device, size_t device_id)
 {
-	/*
-		找到并打开 Azure Kinect 设备
-	*/
-	// 发现已连接的设备数
-	uint32_t device_count = k4a::device::get_installed_count();
-	if (0 == device_count) {
-		KERBAL_LOG_WRITE(FATAL, "No K4A device found.");
-		exit(EXIT_FAILURE);
-	}
-
-	KERBAL_LOG_WRITE(INFO, "Found {} connected devices.", device_count);
-
-	// 打开设备
-	std::vector<k4a::device> devices;
-	devices.reserve(device_count);
-	for (uint32_t i = 0; i < device_count; ++i) {
-		devices.push_back(k4a::device::open(1));
-		configure_and_start_camara(devices[i], i);
-	}
-	KERBAL_LOG_WRITE(INFO, "Done: open device.", device_count);
-
-	/*
-		检索 Azure Kinect 图像数据
-	*/
-
-	for (size_t i = 0; i < devices.size(); ++i) {
-		stable(devices[i], i);
-	}
-
-
-	const char working_dir[] = R"(D:\database_center\)";
-
-	string defaultPath = "D:\\database_center\\depth1\\";
-	string defaultPath2 = "D:\\database_center\\彩色深度图像1\\";
-
-	char pszKnownPath[30];
-	char pa[30];
-	SYSTEMTIME lpsystime;
-	GetLocalTime(&lpsystime);
-	sprintf_s(pszKnownPath, "%04d-%02d-%02d\\", lpsystime.wYear, lpsystime.wMonth, lpsystime.wDay);
-
-	string folderPath = defaultPath + pszKnownPath + pa;
-	string folderPath2 = defaultPath2 + pszKnownPath + pa;
-	std::cout << "-----------------------------------" << std::endl;
-	std::cout << "----- Have Started Kinect DK. -----" << std::endl;
-	std::cout << "-----------------------------------" << std::endl;
-
-
 	int count = 0;
 	while (true) {
-		k4a::capture capture;
-		// if (device.get_capture(&capture, std::chrono::milliseconds(0)))
-		if (device.get_capture(&capture)) {
-			auto t0 = chrono::system_clock::now();
+			std::filesystem::path camera_working_dir = working_dir / std::to_string(device_id);
+			k4a::capture capture;
+			// if (!device.get_capture(&capture, std::chrono::milliseconds(0)))
+			if (!devices.get_capture(&capture)) {
+				KERBAL_LOG_WRITE(EROR, "Get capture failed!");
+				continue;
+			}
 
+			cv::Mat cv_rgbImage_no_alpha = rgb(capture);
+			cv::Mat cv_depth = depth(capture);
 
-			string szTimeStrin1 = current_timestamp();
-			std::string filename_d = szTimeStrin1 + ".png";
-			std::string filename_d2 = szTimeStrin1 + ".jpg";
-			std::cout << filename_d2 << std::endl;
+			std::string date = current_date();
+			std::string timestamp = current_timestamp();
 
-			imwrite(folderPath + filename_d, cv_depth);
+			std::filesystem::path filename_rgb = depth_path_base / date / (timestamp + ".png");
+			std::filesystem::path filename_depth = depth_path2_base / date / (timestamp + ".jpg");
 
-			imwrite(folderPath2 + filename_d, cv_rgbImage_no_alpha);
+			std::filesystem::create_directories(filename_rgb.parent_path());
+			std::filesystem::create_directories(filename_depth.parent_path());
+
+			bool save_result_rgb = imwrite(filename_rgb.string(), cv_depth);
+			if (!save_result_rgb) {
+				KERBAL_LOG_WRITE(EROR, "rgb save failed: {}", filename_rgb);
+			}
+
+			bool save_result_depth = imwrite(filename_depth.string(), cv_rgbImage_no_alpha);
+			if (!save_result_depth) {
+				KERBAL_LOG_WRITE(EROR, "depth save failed: {}", filename_depth);
+			}
 			//imwrite(folderPath2+ filename_d2, cv_depth_8U);
 
 			count++;
@@ -284,13 +251,61 @@ int main(int argc, char * argv[])
 
 		}
 
+}
+
+int main(int argc, char * argv[])
+{
+	// 找到并打开 Azure Kinect 设备
+	uint32_t device_count = k4a::device::get_installed_count();	// 发现已连接的设备数
+	if (0 == device_count) {
+		KERBAL_LOG_WRITE(FATAL, "No K4A device found.");
+		exit(EXIT_FAILURE);
 	}
+
+	--device_count;
+	KERBAL_LOG_WRITE(INFO, "Found {} connected devices.", device_count);
+
+	// 打开设备
+	std::vector<k4a::device> devices;
+	devices.reserve(device_count);
+	for (uint32_t i = 0; i < device_count; ++i) {
+		try {
+			devices.push_back(k4a::device::open(i));
+		} catch (...) {
+			KERBAL_LOG_WRITE(FATAL, "Camara {} open failed.", i);
+			exit(EXIT_FAILURE);
+		}
+	}
+	try {
+		config_and_start_0(devices[0], 0);
+	}
+	catch (...) {
+		KERBAL_LOG_WRITE(FATAL, "Camara {} start failed.", 0);
+		exit(EXIT_FAILURE);
+	}
+	try {
+		config_and_start_1(devices[1], 1);
+	}
+	catch (...) {
+		KERBAL_LOG_WRITE(FATAL, "Camara {} start failed.", 1);
+		exit(EXIT_FAILURE);
+	}
+
+	KERBAL_LOG_WRITE(INFO, "{} devices have started.", device_count);
+
+	// 检索 Azure Kinect 图像数据
+	for (size_t i = 0; i < devices.size(); ++i) {
+		stable(devices[i], i);
+	}
+
+
+	std::filesystem::path working_dir = R"(D:\dk.test\)";
+
+	std::filesystem::path depth_path_base = working_dir / "depth1";
+	std::filesystem::path depth_path2_base = working_dir / "depth2";
+
 
 	cv::destroyAllWindows();
-
-	for (size_t i = 0; i < devices.size(); ++i) {
-		devices[i].close();
-	}
 
 	KERBAL_LOG_WRITE(INFO, "Good Bye!");
 
