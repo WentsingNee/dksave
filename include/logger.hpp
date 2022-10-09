@@ -13,9 +13,9 @@
 #define KERBAL_LOGGER_HPP
 
 #include <iostream>
-#include <chrono>
-#include <ctime>
 #include <mutex>
+
+#include <ctime>
 
 #include <fmt/format.h>
 

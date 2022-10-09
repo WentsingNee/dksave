@@ -28,10 +28,6 @@ struct DKCamera
 
 		void start()
 		{
-			if (!enable) {
-				return;
-			}
-
 			device.start_cameras(&config);
 			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", device_id);
 		}
@@ -39,13 +35,9 @@ struct DKCamera
 		// 稳定化
 		void stable()
 		{
-			if (!enable) {
-				return;
-			}
-
 			k4a::capture capture;
-			int success = 0;//用来稳定，类似自动曝光
-			int failed = 0;// 统计自动曝光的失败次数
+			int success = 0; //用来稳定，类似自动曝光
+			int failed = 0; // 统计自动曝光的失败次数
 
 			while (true) {
 				if (device.get_capture(&capture)) {
@@ -53,7 +45,7 @@ struct DKCamera
 					success++;
 					KERBAL_LOG_WRITE(KINFO, "Capture several frames to give auto-exposure for {} times.", success);
 
-					if (success == 30) {
+					if (success >= 30) {
 						KERBAL_LOG_WRITE(KINFO, "Done: auto-exposure.");
 						return; // 完成相机的稳定过程
 					}
@@ -61,9 +53,10 @@ struct DKCamera
 					failed++;
 					KERBAL_LOG_WRITE(KWARNING, "K4A_WAIT_RESULT_TIMEOUT for {} times.", failed);
 
-					if (failed == 30) {
+					if (failed >= 30) {
 						KERBAL_LOG_WRITE(KFATAL, "Failed to give auto-exposure.", failed);
-						exit(EXIT_FAILURE);
+						enable = false;
+						return;
 					}
 				}
 			}
@@ -111,7 +104,6 @@ inline k4a_device_configuration_t get_config_1()
 
 	return config;
 }
-
 
 
 #endif // DKSAVE_DKCAMERA_HPP
