@@ -178,58 +178,73 @@ static void camera_working_thread(DKCamera & camera)
 
 	int count = 0;
 	while (true) {
-		k4a::capture capture;
-		// device.get_capture(&capture, std::chrono::milliseconds(0))
-
 		try {
-			bool capture_result = camera.device.get_capture(&capture);
-			if (!capture_result) {
+			k4a::capture capture;
+			// device.get_capture(&capture, std::chrono::milliseconds(0))
+
+			try {
+				bool capture_result = camera.device.get_capture(&capture);
+				if (!capture_result) {
+					KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
+					continue;
+				}
+			} catch (...) {
 				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
 				continue;
 			}
+
+
+			k4a::image rgbImage = capture.get_color_image();
+
+			std::string date = current_date();
+			std::string timestamp = current_timestamp();
+
+			cv::Mat cv_rgbImage_no_alpha = k4a_img_to_rgb_no_alpha(rgbImage);
+			std::filesystem::path filename_rgb = path_base_rgb / date / (timestamp + ".png");
+			try {
+				save_cv_mat(cv_rgbImage_no_alpha, filename_rgb);
+			} catch (...) {
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: rgb save failed: {}", camera.device_id, filename_rgb.string());
+			}
+
+			bool handle_depth = true;
+			k4a::image depthImage = capture.get_depth_image();
+			k4a::image depthImageTran;
+			try {
+				depthImageTran = transform(camera, depthImage);
+			} catch (...) {
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save transform failed", camera.device_id);
+				handle_depth = false;
+			}
+
+			if (handle_depth) {
+				cv::Mat cv_depth = depth_to_rgb_mode(depthImageTran);
+				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
+				try {
+					save_cv_mat(cv_depth, filename_depth);
+				} catch (...) {
+					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
+				}
+			}
+
+			// 深度图 (假彩色)
+			//cv::Mat cv_depth_rainbow = depth_ranbow(depthImageTran);
+			//std::filesystem::path filename_depth_rainbow = path_base_depth_ranbow / date / (timestamp + ".png");
+			//try {
+			//	save_cv_mat(cv_depth_rainbow, filename_depth_rainbow);
+			//}
+			//catch (...) {
+			//	KERBAL_LOG_WRITE(KERROR, "Camera {}: rainbow save failed: {}", camera.device_id, filename_depth_rainbow.string());
+			//}
+
+			count++;
+			KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handle done.", camera.device_id, count);
+
+			cv::waitKey(1);
+
 		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
-			continue;
+			KERBAL_LOG_WRITE(KERROR, "Camera {}: Unhandled exception.", camera.device_id);
 		}
-
-
-		k4a::image rgbImage = capture.get_color_image();
-		k4a::image depthImage = capture.get_depth_image();
-		k4a::image depthImageTran = transform(camera, depthImage);
-
-		std::string date = current_date();
-		std::string timestamp = current_timestamp();
-
-		cv::Mat cv_rgbImage_no_alpha = k4a_img_to_rgb_no_alpha(rgbImage);
-		std::filesystem::path filename_rgb = path_base_rgb / date / (timestamp + ".png");
-		try {
-			save_cv_mat(cv_rgbImage_no_alpha, filename_rgb);
-		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: rgb save failed: {}", camera.device_id, filename_rgb.string());
-		}
-
-		cv::Mat cv_depth = depth_to_rgb_mode(depthImageTran);
-		std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
-		try {
-			save_cv_mat(cv_depth, filename_depth);
-		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
-		}
-
-		// 深度图 (假彩色)
-		//cv::Mat cv_depth_rainbow = depth_ranbow(depthImageTran);
-		//std::filesystem::path filename_depth_rainbow = path_base_depth_ranbow / date / (timestamp + ".png");
-		//try {
-		//	save_cv_mat(cv_depth_rainbow, filename_depth_rainbow);
-		//}
-		//catch (...) {
-		//	KERBAL_LOG_WRITE(KERROR, "Camera {}: rainbow save failed: {}", camera.device_id, filename_depth_rainbow.string());
-		//}
-
-		count++;
-		KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handle done.", camera.device_id, count);
-
-		cv::waitKey(1);
 
 	}
 
