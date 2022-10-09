@@ -78,9 +78,11 @@ static cv::Mat k4a_img_to_depth_rainbow(const k4a::image & img)
 
 	cv::Mat dst;
 	cv::convertScaleAbs(mat, dst, 0.08);
-	cv::applyColorMap(dst, mat_8u, cv::COLORMAP_JET);
 
-	return dst;
+	cv::Mat result;
+	cv::applyColorMap(dst, result, cv::COLORMAP_RAINBOW);
+
+	return result;
 }
 
 static cv::Mat ir(const k4a::image & img)
@@ -174,7 +176,7 @@ static void camera_working_thread(DKCamera & camera)
 
 	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
 	std::filesystem::path path_base_depth = camera_working_dir / "depth";
-	std::filesystem::path path_base_depth_ranbow = camera_working_dir / "ranbow";
+	std::filesystem::path path_base_depth_ranbow = camera_working_dir / "rainbow";
 
 	int count = 0;
 	while (true) {
@@ -228,14 +230,14 @@ static void camera_working_thread(DKCamera & camera)
 			}
 
 			// 深度图 (假彩色)
-			//cv::Mat cv_depth_rainbow = depth_ranbow(depthImageTran);
-			//std::filesystem::path filename_depth_rainbow = path_base_depth_ranbow / date / (timestamp + ".png");
-			//try {
-			//	save_cv_mat(cv_depth_rainbow, filename_depth_rainbow);
-			//}
-			//catch (...) {
-			//	KERBAL_LOG_WRITE(KERROR, "Camera {}: rainbow save failed: {}", camera.device_id, filename_depth_rainbow.string());
-			//}
+			cv::Mat cv_depth_rainbow = k4a_img_to_depth_rainbow(depthImageTran);
+			std::filesystem::path filename_depth_rainbow = path_base_depth_ranbow / date / (timestamp + ".png");
+			try {
+				save_cv_mat(cv_depth_rainbow, filename_depth_rainbow);
+			}
+			catch (...) {
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: rainbow save failed: {}", camera.device_id, filename_depth_rainbow.string());
+			}
 
 			count++;
 			KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handle done.", camera.device_id, count);
@@ -287,7 +289,7 @@ int main(int argc, char * argv[])
 		k4a_device_configuration_t config = (
 				it == configurations.cend() ?
 				K4A_DEVICE_CONFIG_INIT_DISABLE_ALL :
-				it->second()
+				it->second
 		); // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
 
 		DKCamera & camera = cameras.emplace_back(std::move(device), i, std::move(config), true);
