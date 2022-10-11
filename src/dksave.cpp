@@ -33,72 +33,94 @@ static void describe_img(const k4a::image & img, const char type[])
 	KERBAL_LOG_WRITE(KDEBUG, "height: {}, width: {}", img.get_height_pixels(), img.get_width_pixels());
 }
 
-/**
- * 将 k4a 可见光图像转换为无透明度通道的 cv::Mat
- * @param img 一般为通过 capture.get_color_image() 得到的图像
- * @return
- */
-static cv::Mat k4a_img_to_rgb_no_alpha(const k4a::image & img)
+static void save_cv_mat(const cv::Mat & mat, const std::filesystem::path & path)
 {
-	// rgb
-	// * Each pixel of BGRA32 data is four bytes. The first three bytes represent Blue, Green,
-	// * and Red data. The fourth byte is the alpha channel and is unused in the Azure Kinect APIs.
+	std::filesystem::create_directories(path.parent_path());
 
-	describe_img(img, "rgb");
+	bool save_result = imwrite(path.string(), mat);
+	if (!save_result) {
+		throw std::runtime_error("Save failed.");
+	}
 
-	cv::Mat mat_with_alpha(img.get_height_pixels(), img.get_width_pixels(), CV_8UC4, (void *) (img.get_buffer()));
-
-	cv::Mat mat_no_alpha;
-	cv::cvtColor(mat_with_alpha, mat_no_alpha, cv::COLOR_BGRA2BGR);
-
-	return mat_no_alpha;
+	KERBAL_LOG_WRITE(KINFO, "Saved {}", path.string());
 }
 
-/**
- * 将 k4a 深度图像转换为假彩色风格的 cv::Mat
- * @param img
- * @return
- */
-static cv::Mat k4a_img_to_depth_rainbow(const k4a::image & img)
+struct k4a_img_to_rgb_no_alpha_context_t
 {
-	// depth
-	// * Each pixel of DEPTH16 data is two bytes of little endian unsigned depth data. The unit of the data is in
-	// * millimeters from the origin of the camera.
+		cv::Mat mat_with_alpha;
+		cv::Mat mat_no_alpha;
 
-	describe_img(img, "depth");
+		/**
+		 * 将 k4a 可见光图像转换为无透明度通道的 cv::Mat
+		 * @param img 一般为通过 capture.get_color_image() 得到的图像
+		 * @return
+		 */
+		cv::Mat & convert(const k4a::image & img)
+		{
+			// rgb
+			// * Each pixel of BGRA32 data is four bytes. The first three bytes represent Blue, Green,
+			// * and Red data. The fourth byte is the alpha channel and is unused in the Azure Kinect APIs.
 
-	cv::Mat mat(img.get_height_pixels(), img.get_width_pixels(), CV_16U, (void *) (img.get_buffer()));
+			describe_img(img, "rgb");
 
-	cv::Mat mat_8u;
-	mat.convertTo(mat_8u, CV_8U);
+			mat_with_alpha = cv::Mat(img.get_height_pixels(), img.get_width_pixels(), CV_8UC4, (void *) (img.get_buffer()));
 
-	//cv::Mat mat_ranbow;
-	//cv::applyColorMap(mat_8u, mat_ranbow, cv::COLORMAP_RAINBOW);
-	//return mat_ranbow;
+			cv::cvtColor(mat_with_alpha, mat_no_alpha, cv::COLOR_BGRA2BGR);
 
-	cv::Mat dst;
-	cv::convertScaleAbs(mat, dst, 0.08);
+			return mat_no_alpha;
+		}
+};
 
-	cv::Mat result;
-	cv::applyColorMap(dst, result, cv::COLORMAP_RAINBOW);
-
-	return result;
-}
-
-static cv::Mat ir(const k4a::image & img)
+struct k4a_img_to_depth_rainbow_context_t
 {
-	// ir
-	// * Each pixel of IR16 data is two bytes of little endian unsigned depth data. The value of the data represents
-	// * brightness.
-	describe_img(img, "ir");
+		cv::Mat mat;
+		cv::Mat dst;
+		cv::Mat result;
 
-	cv::Mat mat(img.get_height_pixels(), img.get_width_pixels(), CV_16U, (void *) (img.get_buffer()));
+		/**
+		 * 将 k4a 深度图像转换为假彩色风格的 cv::Mat
+		 * @param img
+		 * @return
+		 */
+		cv::Mat & convert(const k4a::image & img)
+		{
+			// depth
+			// * Each pixel of DEPTH16 data is two bytes of little endian unsigned depth data. The unit of the data is in
+			// * millimeters from the origin of the camera.
 
-	cv::Mat mat_8U;
-	mat.convertTo(mat_8U, CV_8U);
+			describe_img(img, "depth");
 
-	return mat_8U;
-}
+			mat = cv::Mat(img.get_height_pixels(), img.get_width_pixels(), CV_16U, (void *) (img.get_buffer()));
+
+			cv::convertScaleAbs(mat, dst, 255 / 65535.0);
+
+			cv::applyColorMap(dst, result, cv::COLORMAP_RAINBOW);
+			// 颜色选项可参考：https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
+
+			return result;
+		}
+
+};
+
+struct k4a_img_to_ir_context_t
+{
+		cv::Mat mat;
+		cv::Mat mat_8U;
+
+		cv::Mat & convert(const k4a::image & img)
+		{
+			// ir
+			// * Each pixel of IR16 data is two bytes of little endian unsigned depth data. The value of the data represents
+			// * brightness.
+			describe_img(img, "ir");
+
+			mat = cv::Mat(img.get_height_pixels(), img.get_width_pixels(), CV_16U, (void *) (img.get_buffer()));
+
+			mat.convertTo(mat_8U, CV_8U);
+
+			return mat_8U;
+		}
+};
 
 //深度图和RGB图配准
 static void do_registration(const DKCamera & camera, const k4a::image & depthImage, const k4a::image & rgbImage, const k4a::image & irImage)
@@ -132,35 +154,46 @@ static void do_registration(const DKCamera & camera, const k4a::image & depthIma
 	cv::imshow("depth", cv_depth_8U);
 }
 
-static k4a::image transform(const DKCamera & camera, const k4a::image & depth_img)
+
+struct depth_img_to_color_context_t
 {
-	// 深度转RGB模式
-	k4a::calibration k4aCalibration = camera.device.get_calibration(camera.config.depth_mode,
-																	camera.config.color_resolution);// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
-	k4a::transformation k4aTransformation = k4a::transformation(k4aCalibration);
-	return k4aTransformation.depth_image_to_color_camera(depth_img);
-}
+		k4a::calibration calibration;
+		k4a::transformation transformation;
 
-static cv::Mat depth_to_rgb_mode(const k4a::image & depth_img)
+		depth_img_to_color_context_t(const DKCamera & camera) :
+				calibration(
+						camera.device.get_calibration(
+								camera.config.depth_mode,
+								camera.config.color_resolution
+						)
+				), // Get the camera calibration for the entire K4A device, which is used for all transformation functions.
+				transformation(calibration)
+		{
+		}
+
+		k4a::image color_img;
+
+		k4a::image & convert(const k4a::image & depth_img)
+		{
+			color_img = transformation.depth_image_to_color_camera(depth_img);
+			return color_img;
+		}
+};
+
+struct k4a_img_to_depth_context_t
 {
-	cv::Mat cv_depth(depth_img.get_height_pixels(), depth_img.get_width_pixels(), CV_16U,
-					 (void *) (depth_img.get_buffer()), static_cast<size_t>(depth_img.get_stride_bytes()));
+		cv::Mat cv_depth;
 
-	return cv_depth;
-}
+		cv::Mat & convert(const k4a::image & depth_img)
+		{
+			cv_depth = cv::Mat(depth_img.get_height_pixels(), depth_img.get_width_pixels(), CV_16U,
+							   (void *) (depth_img.get_buffer()), static_cast<size_t>(depth_img.get_stride_bytes()));
 
+			return cv_depth;
 
-static void save_cv_mat(const cv::Mat & mat, const std::filesystem::path & path)
-{
-	std::filesystem::create_directories(path.parent_path());
+		}
+};
 
-	bool save_result = imwrite(path.string(), mat);
-	if (!save_result) {
-		throw std::runtime_error("Save failed.");
-	}
-
-	KERBAL_LOG_WRITE(KINFO, "Saved {}", path.string());
-}
 
 static const std::filesystem::path working_dir = R"(D:\dk.test\)";
 
@@ -176,13 +209,35 @@ static void camera_working_thread(DKCamera & camera)
 
 	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
 	std::filesystem::path path_base_depth = camera_working_dir / "depth";
-	std::filesystem::path path_base_depth_ranbow = camera_working_dir / "rainbow";
+	std::filesystem::path path_base_depth_rainbow = camera_working_dir / "rainbow";
+
+	k4a_img_to_rgb_no_alpha_context_t k4a_img_to_rgb_no_alpha_context;
+	depth_img_to_color_context_t depth_img_to_color_context(camera);
+	k4a_img_to_depth_context_t k4a_img_to_depth_context;
+	k4a_img_to_depth_rainbow_context_t k4a_img_to_depth_rainbow_context;
 
 	int count = 0;
 	while (true) {
+
+		auto is_night = []() {
+			SYSTEMTIME time;
+			GetLocalTime(&time);
+			if (time.wHour <= 5) {
+				return true;
+			} else if (time.hour >= 19) {
+				return true;
+			}
+			return false;
+		};
+
+		if (is_night()) {
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(1min);
+			continue;
+		}
+
 		try {
 			k4a::capture capture;
-			// device.get_capture(&capture, std::chrono::milliseconds(0))
 
 			try {
 				bool capture_result = camera.device.get_capture(&capture);
@@ -201,7 +256,7 @@ static void camera_working_thread(DKCamera & camera)
 			std::string date = current_date();
 			std::string timestamp = current_timestamp();
 
-			cv::Mat cv_rgbImage_no_alpha = k4a_img_to_rgb_no_alpha(rgbImage);
+			const cv::Mat & cv_rgbImage_no_alpha = k4a_img_to_rgb_no_alpha_context.convert(rgbImage);
 			std::filesystem::path filename_rgb = path_base_rgb / date / (timestamp + ".png");
 			try {
 				save_cv_mat(cv_rgbImage_no_alpha, filename_rgb);
@@ -211,32 +266,32 @@ static void camera_working_thread(DKCamera & camera)
 
 			bool handle_depth = true;
 			k4a::image depthImage = capture.get_depth_image();
-			k4a::image depthImageTran;
+			const k4a::image * depthImageTran = nullptr;
 			try {
-				depthImageTran = transform(camera, depthImage);
+				depthImageTran = &depth_img_to_color_context.convert(depthImage);
 			} catch (...) {
 				KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save transform failed", camera.device_id);
 				handle_depth = false;
 			}
 
 			if (handle_depth) {
-				cv::Mat cv_depth = depth_to_rgb_mode(depthImageTran);
+				cv::Mat cv_depth = depth_to_rgb_mode(*depthImageTran);
 				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
 				try {
 					save_cv_mat(cv_depth, filename_depth);
 				} catch (...) {
 					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
 				}
-			}
 
-			// 深度图 (假彩色)
-			cv::Mat cv_depth_rainbow = k4a_img_to_depth_rainbow(depthImageTran);
-			std::filesystem::path filename_depth_rainbow = path_base_depth_ranbow / date / (timestamp + ".png");
-			try {
-				save_cv_mat(cv_depth_rainbow, filename_depth_rainbow);
-			}
-			catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: rainbow save failed: {}", camera.device_id, filename_depth_rainbow.string());
+				// 深度图 (假彩色)
+//				const cv::Mat & cv_depth_rainbow = k4a_img_to_depth_rainbow_context.apply(*depthImageTran);
+//				std::filesystem::path filename_depth_rainbow = path_base_depth_rainbow / date / (timestamp + ".png");
+//				try {
+//					save_cv_mat(cv_depth_rainbow, filename_depth_rainbow);
+//				}
+//				catch (...) {
+//					KERBAL_LOG_WRITE(KERROR, "Camera {}: rainbow save failed: {}", camera.device_id, filename_depth_rainbow.string());
+//				}
 			}
 
 			count++;
