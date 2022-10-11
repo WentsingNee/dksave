@@ -224,7 +224,7 @@ static void camera_working_thread(DKCamera & camera)
 			GetLocalTime(&time);
 			if (time.wHour <= 5) {
 				return true;
-			} else if (time.hour >= 19) {
+			} else if (time.wHour >= 19) {
 				return true;
 			}
 			return false;
@@ -275,7 +275,7 @@ static void camera_working_thread(DKCamera & camera)
 			}
 
 			if (handle_depth) {
-				cv::Mat cv_depth = depth_to_rgb_mode(*depthImageTran);
+				const cv::Mat & cv_depth = k4a_img_to_depth_context.convert(*depthImageTran);
 				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
 				try {
 					save_cv_mat(cv_depth, filename_depth);
