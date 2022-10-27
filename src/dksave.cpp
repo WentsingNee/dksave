@@ -219,12 +219,16 @@ static void camera_working_thread(DKCamera & camera)
 	int count = 0;
 	while (true) {
 
-		auto is_night = []() {
-			SYSTEMTIME time;
-			GetLocalTime(&time);
-			if (time.wHour <= 5) {
+		auto start_time = std::chrono::steady_clock::now();
+
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+
+		auto is_night = [&time]() {
+			if (time.wHour <= 7) { // 从 8:00:00 开始采到 17:59:59
 				return true;
-			} else if (time.wHour >= 19) {
+			}
+			else if (time.wHour >= 18) {
 				return true;
 			}
 			return false;
@@ -233,6 +237,12 @@ static void camera_working_thread(DKCamera & camera)
 		if (is_night()) {
 			using namespace std::chrono_literals;
 			std::this_thread::sleep_for(1min);
+			continue;
+		}
+
+		if (!(0 <= time.wMinute && time.wMinute <= 14)) {
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(1s);
 			continue;
 		}
 
@@ -303,7 +313,10 @@ static void camera_working_thread(DKCamera & camera)
 			KERBAL_LOG_WRITE(KERROR, "Camera {}: Unhandled exception.", camera.device_id);
 		}
 
-	}
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_until(start_time + 480ms);
+
+	} // while
 
 }
 
