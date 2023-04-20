@@ -62,6 +62,12 @@ struct DKCamera
 			}
 		}
 
+		void stop()
+		{
+			device.close();
+			enable = false;
+		}
+
 };
 
 
@@ -72,7 +78,7 @@ inline k4a_device_configuration_t get_config_0()
 	config.camera_fps = K4A_FRAMES_PER_SECOND_30;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
 
-	config.color_resolution = K4A_COLOR_RESOLUTION_720P; //1536P
+	config.color_resolution = K4A_COLOR_RESOLUTION_720P;
 	//config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
 
 	//config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
@@ -92,7 +98,7 @@ inline k4a_device_configuration_t get_config_1()
 	config.camera_fps = K4A_FRAMES_PER_SECOND_15;
 	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
 
-	//config.color_resolution = K4A_COLOR_RESOLUTION_720P; //1536P
+	//config.color_resolution = K4A_COLOR_RESOLUTION_720P;
 	config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
 
 	//config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
