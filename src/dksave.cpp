@@ -173,9 +173,6 @@ auto get_clock(auto time_point)
  */
 static void camera_working_thread(DKCamera & camera)
 {
-	camera.stable();
-	KERBAL_LOG_WRITE(KINFO, "Camera {} have been stable.", camera.device_id);
-
 	std::filesystem::path camera_working_dir = working_dir / ("camera" + std::to_string(camera.device_id));
 
 	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
@@ -194,17 +191,30 @@ static void camera_working_thread(DKCamera & camera)
 
 		working_status status = judge(start_time);
 		if (status == working_status::SLEEP) {
+			KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_id);
 			camera.stop();
 			std::this_thread::sleep_for(1min);
 			continue;
 		} else {
 			if (!camera.enable) {
 				// 启动设备
+				KERBAL_LOG_WRITE(KINFO, "Camera {} is sleeping, try to wake up...", camera.device_id);
 				try {
 					camera.start();
+					KERBAL_LOG_WRITE(KINFO, "Camera {} has been started.", camera.device_id);
 				} catch (...) {
 					camera.enable = false;
-					KERBAL_LOG_WRITE(KERROR, "Camara {} start failed.", camera.device_id);
+					KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_id);
+					std::this_thread::sleep_for(30s);
+					continue;
+				}
+				try {
+					camera.stabilize();
+					KERBAL_LOG_WRITE(KINFO, "Camera {} has been stable.", camera.device_id);
+				} catch (...) {
+					camera.enable = false;
+					KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.", camera.device_id);
+					std::this_thread::sleep_for(30s);
 					continue;
 				}
 			}
@@ -225,11 +235,14 @@ static void camera_working_thread(DKCamera & camera)
 			try {
 				capture_success = camera.device.get_capture(&capture);
 			} catch (...) {
-				capture_success = false;
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
+				std::this_thread::sleep_until(start_time + 500ms);
+				continue;
 			}
 
 			if (!capture_success) {
 				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
+				std::this_thread::sleep_until(start_time + 500ms);
 				continue;
 			}
 
@@ -299,9 +312,9 @@ int main(int argc, char * argv[])
 	std::vector<DKCamera> cameras;
 	cameras.reserve(device_count);
 
-	std::map<uint32_t, k4a_device_configuration_t> configurations = {
-			{0, get_config_0()},
-			{1, get_config_1()},
+	std::map<std::string, k4a_device_configuration_t> configurations = {
+			{"000642213912", get_config_0()},
+			{"001376414312", get_config_1()},
 	};
 
 
@@ -311,26 +324,24 @@ int main(int argc, char * argv[])
 		k4a::device device;
 		try {
 			device = k4a::device::open(i);
+			std::string serialnum = device.get_serialnum();
+			KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serialnum);
+
+			auto it = configurations.find(serialnum);
+			k4a_device_configuration_t config = (
+					it == configurations.cend() ?
+					K4A_DEVICE_CONFIG_INIT_DISABLE_ALL :
+					it->second
+			); // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
+
+			cameras.emplace_back(std::move(device), i, std::move(config));
 		} catch (...) {
 			KERBAL_LOG_WRITE(KERROR, "Camara {} open failed.", i);
 			continue;
 		}
-
-		std::string serialnum = device.get_serialnum();
-		KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serialnum);
-
-		auto it = configurations.find(i);
-		k4a_device_configuration_t config = (
-				it == configurations.cend() ?
-				K4A_DEVICE_CONFIG_INIT_DISABLE_ALL :
-				it->second
-		); // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
-
-		DKCamera & camera = cameras.emplace_back(std::move(device), i, std::move(config), true);
 	}
 
-
-	KERBAL_LOG_WRITE(KINFO, "{} cameras have started.", cameras.size());
+	KERBAL_LOG_WRITE(KINFO, "{} cameras have been opened.", cameras.size());
 
 	std::vector<std::thread> threads;
 	threads.reserve(cameras.size());

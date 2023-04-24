@@ -24,23 +24,39 @@ struct DKCamera
 		k4a::device device;
 		int device_id;
 		k4a_device_configuration_t config;
-		bool enable = true;
+		bool enable;
+
+		DKCamera(
+			k4a::device && device,
+			int device_id,
+			k4a_device_configuration_t && config) :
+			device(std::move(device)), device_id(device_id), config(std::move(config)), enable(false)
+		{
+		}
 
 		void start()
 		{
 			device.start_cameras(&config);
+			enable = true;
 			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", device_id);
 		}
 
 		// 稳定化
-		void stable()
+		void stabilize()
 		{
 			k4a::capture capture;
 			int success = 0; //用来稳定，类似自动曝光
 			int failed = 0; // 统计自动曝光的失败次数
 
 			while (true) {
-				if (device.get_capture(&capture)) {
+				bool capture_success = true;
+				try {
+					capture_success = device.get_capture(&capture);
+				} catch (...) {
+					capture_success = false;
+				}
+
+				if (capture_success) {
 					// 跳过前 n 个（成功的数据采集）循环，用来稳定
 					success++;
 					KERBAL_LOG_WRITE(KINFO, "Capture several frames to give auto-exposure for {} times.", success);
@@ -55,7 +71,7 @@ struct DKCamera
 
 					if (failed >= 30) {
 						KERBAL_LOG_WRITE(KFATAL, "Failed to give auto-exposure.", failed);
-						enable = false;
+						this->stop();
 						return;
 					}
 				}
