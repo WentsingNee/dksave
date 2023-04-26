@@ -135,7 +135,7 @@ using namespace std::chrono_literals;
 
 auto start_time = 8h;
 auto end_time = 18h;
-auto prepare_time = 30s;
+auto prepare_time = 1min;
 
 enum class working_status
 {
@@ -191,8 +191,10 @@ static void camera_working_thread(DKCamera & camera)
 
 		working_status status = judge(start_time);
 		if (status == working_status::SLEEP) {
-			KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_id);
-			camera.stop();
+			if (camera.enable) {
+				KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_id);
+				camera.stop();
+			}
 			std::this_thread::sleep_for(1min);
 			continue;
 		} else {
@@ -321,9 +323,8 @@ int main(int argc, char * argv[])
 	for (uint32_t i = 0; i < device_count; ++i) {
 
 		// 打开设备
-		k4a::device device;
 		try {
-			device = k4a::device::open(i);
+			k4a::device device = k4a::device::open(i);
 			std::string serialnum = device.get_serialnum();
 			KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serialnum);
 
