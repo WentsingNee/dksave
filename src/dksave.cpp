@@ -5,6 +5,7 @@
  * @author     Peter
  */
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include <thread>
@@ -146,9 +147,10 @@ enum class working_status
 
 static working_status judge(std::chrono::time_point<std::chrono::system_clock> now)
 {
-	now += 8h;
-	auto today_midnight = std::chrono::floor<std::chrono::days>(now);
-	auto time_since_midnight = now - today_midnight;
+	const std::chrono::time_zone * tz = std::chrono::current_zone();
+	auto local_now = tz->to_local(now);
+	auto today_midnight = std::chrono::floor<std::chrono::days>(local_now);
+	auto time_since_midnight = local_now - today_midnight;
 
 	if (start_time <= time_since_midnight && time_since_midnight < end_time) {
 		return working_status::WORK;
@@ -158,13 +160,6 @@ static working_status judge(std::chrono::time_point<std::chrono::system_clock> n
 		return working_status::READY;
 	}
 	return working_status::SLEEP;
-}
-
-auto get_clock(auto time_point)
-{
-	using namespace std::chrono;
-	auto today = duration_cast<days>(time_point);
-	return time_point - today;
 }
 
 
