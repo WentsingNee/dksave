@@ -94,25 +94,27 @@ struct k4a_img_to_ir_context_t
 
 struct depth_img_to_color_context_t
 {
+		k4a::calibration calibration;
 		k4a::transformation transformation;
 
 		depth_img_to_color_context_t(const DKCamera & camera) :
 				// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
-				transformation(
+				calibration(
 					camera.device.get_calibration(
 						camera.config.depth_mode,
 						camera.config.color_resolution
 					)
-				)
+				),
+				transformation(calibration)
 		{
 		}
 
-		k4a::image color_img;
+		k4a::image depth_img_regi_to_rgb; // 深度向 rgb 配准的图像
 
 		k4a::image & convert(const k4a::image & depth_img)
 		{
-			color_img = transformation.depth_image_to_color_camera(depth_img);
-			return color_img;
+			depth_img_regi_to_rgb = transformation.depth_image_to_color_camera(depth_img);
+			return depth_img_regi_to_rgb;
 		}
 };
 
