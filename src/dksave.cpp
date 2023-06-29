@@ -23,6 +23,12 @@
 #include "logger.hpp"
 #include "DKCamera.hpp"
 
+// PCL
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/point_types.h>
+
+
 
 static void describe_img(const k4a::image & img, const char type[])
 {
@@ -94,25 +100,35 @@ struct k4a_img_to_ir_context_t
 
 struct depth_img_to_color_context_t
 {
+		k4a::calibration calibration;
 		k4a::transformation transformation;
 
 		depth_img_to_color_context_t(const DKCamera & camera) :
 				// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
-				transformation(
+				calibration(
 					camera.device.get_calibration(
 						camera.config.depth_mode,
 						camera.config.color_resolution
 					)
-				)
+				),
+				transformation(calibration)
 		{
 		}
 
-		k4a::image color_img;
+		k4a::image depth_img_regi_to_rgb; // 深度向 rgb 配准的图像
+		k4a::image points_cloud_img;
 
 		k4a::image & convert(const k4a::image & depth_img)
 		{
-			color_img = transformation.depth_image_to_color_camera(depth_img);
-			return color_img;
+			depth_img_regi_to_rgb = transformation.depth_image_to_color_camera(depth_img);
+			return depth_img_regi_to_rgb;
+		}
+
+		k4a::image& get_points_cloud_img()
+		{
+			this->points_cloud_img = transformation.depth_image_to_point_cloud(
+				this->depth_img_regi_to_rgb, K4A_CALIBRATION_TYPE_COLOR);
+			return this->points_cloud_img;
 		}
 };
 
@@ -130,11 +146,44 @@ struct k4a_img_to_depth_context_t
 };
 
 
+struct k4a_img_to_pcl_context_t
+{
+	pcl::PointCloud<pcl::PointXYZRGB> pcl;
+
+	pcl::PointCloud<pcl::PointXYZRGB> & get_pcl(const k4a::image & pointClodImg)
+	{
+		pcl.clear();
+		pcl.width = pointClodImg.get_width_pixels();
+		pcl.height = pointClodImg.get_height_pixels();
+		std::size_t size = pcl.width * pcl.height;
+		pcl.resize(size);
+		pcl.is_dense = false;
+		const std::uint16_t* pointClodImg_buffer = reinterpret_cast<const std::uint16_t*>(pointClodImg.get_buffer());
+		for (std::size_t i = 0; i < size; ++i) {
+			pcl::PointXYZRGB point;
+			point.x = pointClodImg_buffer[3 * i + 0] / 10.0f;
+			point.y = pointClodImg_buffer[3 * i + 1] / 10.0f;
+			point.z = pointClodImg_buffer[3 * i + 2] / 10.0f;
+			//std::cout << point.x << "  " << point.y << "   " << point.z << std::endl;
+			//if (point.x == 0 && point.y == 0 && point.z == 0) {
+			//	continue;
+			//}
+
+			point.r = 128;
+			point.g = 128;
+			point.b = 128;
+			pcl[i] = point;
+		}
+		return this->pcl;
+	}
+};
+
+
 static const std::filesystem::path working_dir = R"(D:\dk.test\)";
 
 using namespace std::chrono_literals;
 
-auto start_time = 8h;
+auto start_time = 0h;
 auto end_time = 18h;
 auto prepare_time = 1min;
 
@@ -173,11 +222,13 @@ static void camera_working_thread(DKCamera & camera)
 	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
 	std::filesystem::path path_base_depth = camera_working_dir / "depth";
 	std::filesystem::path path_base_depth_rainbow = camera_working_dir / "rainbow";
+	std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
 	
 	k4a::capture capture;
 	k4a_img_to_rgb_no_alpha_context_t k4a_img_to_rgb_no_alpha_context;
 	depth_img_to_color_context_t depth_img_to_color_context(camera);
 	k4a_img_to_depth_context_t k4a_img_to_depth_context;
+	k4a_img_to_pcl_context_t k4a_img_to_pcl_context;
 
 	int count = 0;
 	while (true) {
@@ -220,7 +271,7 @@ static void camera_working_thread(DKCamera & camera)
 		
 		SYSTEMTIME time;
 		GetLocalTime(&time);
-		if (!(0 <= time.wMinute && time.wMinute <= 14)) {
+		if (!(0 <= time.wMinute && time.wMinute <= 59)) {
 			using namespace std::chrono_literals;
 			std::this_thread::sleep_for(1s);
 			continue;
@@ -276,6 +327,18 @@ static void camera_working_thread(DKCamera & camera)
 				} catch (...) {
 					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
 				}
+
+				const k4a::image & pointCloudImg = depth_img_to_color_context.get_points_cloud_img();
+				const auto & cloudPCL = k4a_img_to_pcl_context.get_pcl(pointCloudImg);
+				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");
+				try {
+					pcl::io::savePLYFile(filename_clouds.string(), cloudPCL);
+					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
+				}
+				catch (...) {
+					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds save failed: {}", camera.device_id, filename_depth.string());
+				}
+
 			}
 
 			count++;
@@ -286,7 +349,7 @@ static void camera_working_thread(DKCamera & camera)
 		}
 
 		using namespace std::chrono_literals;
-		std::this_thread::sleep_until(start_time + 500ms);
+		std::this_thread::sleep_until(start_time + 480ms);
 
 	} // while
 
@@ -309,9 +372,10 @@ int main(int argc, char * argv[])
 	std::vector<DKCamera> cameras;
 	cameras.reserve(device_count);
 
-	std::map<std::string, k4a_device_configuration_t> configurations = {
-			{"000642213912", get_config_0()},
-			{"001376414312", get_config_1()},
+	std::map<std::string, std::tuple<int, k4a_device_configuration_t>> configurations = {
+			{"000642213912", {0, get_config_0()}},
+			{"001376414312", {1, get_config_1()}},
+			{"000574514912", {2, get_config_1()}},
 	};
 
 
@@ -324,13 +388,16 @@ int main(int argc, char * argv[])
 			KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serialnum);
 
 			auto it = configurations.find(serialnum);
-			k4a_device_configuration_t config = (
-					it == configurations.cend() ?
-					K4A_DEVICE_CONFIG_INIT_DISABLE_ALL :
-					it->second
-			); // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
+			k4a_device_configuration_t config;
+			int device_id;
+			if (it == configurations.cend()) { // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
+				device_id = 9999;
+				config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+			} else {
+				std::tie(device_id, config) = it->second;
+			}
 
-			cameras.emplace_back(std::move(device), i, std::move(config));
+			cameras.emplace_back(std::move(device), device_id, std::move(config));
 		} catch (...) {
 			KERBAL_LOG_WRITE(KERROR, "Camara {} open failed.", i);
 			continue;

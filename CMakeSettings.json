@@ -1,0 +1,27 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x64-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "variables": [
+        {
+          "name": "CMAKE_PREFIX_PATH",
+          "value": "D:/DK_save_files/opencv/build/x64/vc16/lib;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/lib/;D:/DK_save_files/PCL/",
+          "type": "PATH"
+        },
+        {
+          "name": "DKSAVE_K4A_INCLUDE_PATH",
+          "value": "C:\\Program Files\\Azure Kinect SDK v1.4.1\\sdk\\include/",
+          "type": "PATH"
+        }
+      ]
+    }
+  ]
+}
