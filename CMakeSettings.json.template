@@ -13,7 +13,7 @@
       "variables": [
         {
           "name": "CMAKE_PREFIX_PATH",
-          "value": "C:/Program Files/opencv/build/x64/vc16/lib/;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/lib/",
+          "value": "C:/Program Files/opencv/build/x64/vc16/lib/;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/lib/;C:/Program Files/PCL/",
           "type": "PATH"
         },
         {

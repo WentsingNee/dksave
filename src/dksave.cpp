@@ -23,6 +23,12 @@
 #include "logger.hpp"
 #include "DKCamera.hpp"
 
+// PCL
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/point_types.h>
+
+
 
 static void describe_img(const k4a::image & img, const char type[])
 {
@@ -110,11 +116,19 @@ struct depth_img_to_color_context_t
 		}
 
 		k4a::image depth_img_regi_to_rgb; // 深度向 rgb 配准的图像
+		k4a::image points_cloud_img;
 
 		k4a::image & convert(const k4a::image & depth_img)
 		{
 			depth_img_regi_to_rgb = transformation.depth_image_to_color_camera(depth_img);
 			return depth_img_regi_to_rgb;
+		}
+
+		k4a::image & get_points_cloud_img()
+		{
+			this->points_cloud_img = transformation.depth_image_to_point_cloud(
+				this->depth_img_regi_to_rgb, K4A_CALIBRATION_TYPE_COLOR);
+			return this->points_cloud_img;
 		}
 };
 
@@ -129,6 +143,31 @@ struct k4a_img_to_depth_context_t
 
 			return cv_depth;
 		}
+};
+
+
+struct k4a_img_to_pcl_context_t
+{
+	pcl::PointCloud<pcl::PointXYZ> pcl;
+
+	pcl::PointCloud<pcl::PointXYZ> & get_pcl(const k4a::image & pointClodImg)
+	{
+		pcl.clear();
+		pcl.width = pointClodImg.get_width_pixels();
+		pcl.height = pointClodImg.get_height_pixels();
+		std::size_t size = pcl.width * pcl.height;
+		pcl.resize(size);
+		pcl.is_dense = false;
+		const auto * pointClodImg_buffer = reinterpret_cast<const std::int16_t *>(pointClodImg.get_buffer());
+		for (std::size_t i = 0; i < size; ++i) {
+			pcl[i] = pcl::PointXYZ(
+				pointClodImg_buffer[3 * i + 0] / 1000.0f,
+				pointClodImg_buffer[3 * i + 1] / 1000.0f,
+				pointClodImg_buffer[3 * i + 2] / 1000.0f
+			);
+		}
+		return this->pcl;
+	}
 };
 
 
@@ -175,11 +214,13 @@ static void camera_working_thread(DKCamera & camera)
 	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
 	std::filesystem::path path_base_depth = camera_working_dir / "depth";
 	std::filesystem::path path_base_depth_rainbow = camera_working_dir / "rainbow";
-	
+	std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
+
 	k4a::capture capture;
 	k4a_img_to_rgb_no_alpha_context_t k4a_img_to_rgb_no_alpha_context;
 	depth_img_to_color_context_t depth_img_to_color_context(camera);
 	k4a_img_to_depth_context_t k4a_img_to_depth_context;
+	k4a_img_to_pcl_context_t k4a_img_to_pcl_context;
 
 	int count = 0;
 	while (true) {
@@ -278,6 +319,19 @@ static void camera_working_thread(DKCamera & camera)
 				} catch (...) {
 					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
 				}
+
+				const k4a::image & pointCloudImg = depth_img_to_color_context.get_points_cloud_img();
+				const auto & cloudPCL = k4a_img_to_pcl_context.get_pcl(pointCloudImg);
+				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");
+				try {
+					std::filesystem::create_directories(filename_clouds.parent_path());
+					pcl::io::savePLYFile(filename_clouds.string(), cloudPCL);
+					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
+				}
+				catch (...) {
+					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds save failed: {}", camera.device_id, filename_depth.string());
+				}
+
 			}
 
 			count++;
