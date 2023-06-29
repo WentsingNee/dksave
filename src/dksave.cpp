@@ -1,423 +1,233 @@
-/**
- * @file       DKSave.cpp
- * @brief
- * @date       2022-10-06
- * @author     Peter
- */
-
+// C++
+#include <iostream>
 #include <chrono>
 #include <string>
+#include <io.h>
 #include <vector>
-#include <thread>
-#include <map>
-#include <filesystem>
-#include <ctime>
-
+#include <direct.h>
 // OpenCV
 #include <opencv2/opencv.hpp>
-
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 // Kinect DK
 #include <k4a/k4a.hpp>
-#include <windows.h>
 
-#include "logger.hpp"
-#include "DKCamera.hpp"
-
-// PCL
+// PCL 库
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/point_types.h>
 
+// 定义点云类型
+typedef pcl::PointXYZ PointT;
+typedef pcl::PointCloud<PointT> PointCloud;
 
+using namespace cv;
+using namespace std;
 
-static void describe_img(const k4a::image & img, const char type[])
-{
-	KERBAL_LOG_WRITE(KDEBUG, "[{}]", type);
-	KERBAL_LOG_WRITE(KDEBUG, "format: {}", img.get_format());
-	KERBAL_LOG_WRITE(KDEBUG, "device_timestamp: {}", img.get_device_timestamp().count());
-	KERBAL_LOG_WRITE(KDEBUG, "system_timestamp: {}", img.get_system_timestamp().count());
-	KERBAL_LOG_WRITE(KDEBUG, "height: {}, width: {}", img.get_height_pixels(), img.get_width_pixels());
-}
+// 宏
+// 方便控制是否 std::cout 信息
+#define DEBUG_std_cout 0
 
-static void save_cv_mat(const cv::Mat & mat, const std::filesystem::path & path)
-{
-	std::filesystem::create_directories(path.parent_path());
+int main(int argc, char* argv[]) {
+	/*
+		找到并打开 Azure Kinect 设备
+	*/
+	// 发现已连接的设备数
 
-	bool write_success = imwrite(path.string(), mat);
-	if (!write_success) {
-		throw std::runtime_error("Save failed.");
+	const uint32_t device_count = k4a::device::get_installed_count();
+	if (0 == device_count) {
+		std::cout << "Error: no K4A devices found. " << std::endl;
+		return -1;
 	}
-
-	KERBAL_LOG_WRITE(KINFO, "Saved {}", path.string());
-}
-
-struct k4a_img_to_rgb_no_alpha_context_t
-{
-		cv::Mat mat_with_alpha;
-		cv::Mat mat_no_alpha;
-
-		/**
-		 * 将 k4a 可见光图像转换为无透明度通道的 cv::Mat
-		 * @param img 一般为通过 capture.get_color_image() 得到的图像
-		 * @return
-		 */
-		cv::Mat & convert(k4a::image & img)
+	else {
+		std::cout << "Found " << device_count << " connected devices. " << std::endl;
+		if (1 != device_count)// 超过1个设备，也输出错误信息。
 		{
+			std::cout << "Error: more than one K4A devices found. " << std::endl;
+			return -1;
+		}
+		else// 该示例代码仅限对1个设备操作
+		{
+			std::cout << "Done: found 1 K4A device. " << std::endl;
+		}
+	}
+	// 打开（默认）设备
+	k4a::device device = k4a::device::open(K4A_DEVICE_DEFAULT);
+	std::cout << "Done: open device. " << std::endl;
+
+	/*
+		检索并保存 Azure Kinect 图像数据
+	*/
+	// 配置并启动设备
+	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+	config.camera_fps = K4A_FRAMES_PER_SECOND_30;
+	//config.camera_fps = K4A_FRAMES_PER_SECOND_15;
+	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
+	config.color_resolution = K4A_COLOR_RESOLUTION_720P;
+	config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
+	//config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
+	config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
+	device.start_cameras(&config);
+	std::cout << "Done: start camera." << std::endl;
+
+	//写入txt文件流
+	ofstream rgb_out;
+	ofstream d_out;
+
+	rgb_out.open("./rgb.txt");
+	d_out.open("./depth.txt");
+
+	rgb_out << "#  color images" << endl;
+	rgb_out << "#  file: rgbd_dataset" << endl;
+	rgb_out << "#  timestamp" << "    " << "filename" << endl;
+
+	d_out << "#  depth images" << endl;
+	d_out << "#  file: rgbd_dataset" << endl;
+	d_out << "#  timestamp" << "    " << "filename" << endl;
+
+	rgb_out << flush;
+	d_out << flush;
+	// 稳定化
+	k4a::capture capture;
+	int iAuto = 0;//用来稳定，类似自动曝光
+	int iAutoError = 0;// 统计自动曝光的失败次数
+	while (true) {
+		if (device.get_capture(&capture)) {
+			std::cout << iAuto << ". Capture several frames to give auto-exposure" << std::endl;
+
+			// 跳过前 n 个（成功的数据采集）循环，用来稳定
+			if (iAuto != 30) {
+				iAuto++;
+				continue;
+			}
+			else {
+				std::cout << "Done: auto-exposure" << std::endl;
+				break;// 跳出该循环，完成相机的稳定过程
+			}
+
+		}
+		else {
+			std::cout << iAutoError << ". K4A_WAIT_RESULT_TIMEOUT." << std::endl;
+			if (iAutoError != 30) {
+				iAutoError++;
+				continue;
+			}
+			else {
+				std::cout << "Error: failed to give auto-exposure. " << std::endl;
+				return -1;
+			}
+		}
+	}
+	std::cout << "-----------------------------------" << std::endl;
+	std::cout << "----- Have Started Kinect DK. -----" << std::endl;
+	std::cout << "-----------------------------------" << std::endl;
+	// 从设备获取捕获
+	k4a::image rgbImage;
+	k4a::image depthImage;
+	//k4a::image irImage;
+	k4a::image transformed_depthImage;
+
+	cv::Mat cv_rgbImage_with_alpha;
+	cv::Mat cv_rgbImage_no_alpha;
+	cv::Mat cv_depth;
+	cv::Mat cv_depth_8U;
+
+	int index = 0;
+	while (index < 1) {
+		if (device.get_capture(&capture)) {
 			// rgb
 			// * Each pixel of BGRA32 data is four bytes. The first three bytes represent Blue, Green,
 			// * and Red data. The fourth byte is the alpha channel and is unused in the Azure Kinect APIs.
+			rgbImage = capture.get_color_image();
+#if DEBUG_std_cout == 1
+			std::cout << "[rgb] " << "\n"
+				<< "format: " << rgbImage.get_format() << "\n"
+				<< "device_timestamp: " << rgbImage.get_device_timestamp().count() << "\n"
+				<< "system_timestamp: " << rgbImage.get_system_timestamp().count() << "\n"
+				<< "height*width: " << rgbImage.get_height_pixels() << ", " << rgbImage.get_width_pixels()
+				<< std::endl;
+#endif
 
-			describe_img(img, "rgb");
+			// depth
+			// * Each pixel of DEPTH16 data is two bytes of little endian unsigned depth data. The unit of the data is in
+			// * millimeters from the origin of the camera.
+			depthImage = capture.get_depth_image();
+#if DEBUG_std_cout == 1
+			std::cout << "[depth] " << "\n"
+				<< "format: " << depthImage.get_format() << "\n"
+				<< "device_timestamp: " << depthImage.get_device_timestamp().count() << "\n"
+				<< "system_timestamp: " << depthImage.get_system_timestamp().count() << "\n"
+				<< "height*width: " << depthImage.get_height_pixels() << ", " << depthImage.get_width_pixels()
+				<< std::endl;
+#endif
+			//获取彩色点云
+			k4a::calibration k4aCalibration = device.get_calibration(config.depth_mode, config.color_resolution);
+			k4a::transformation k4aTransformation = k4a::transformation(k4aCalibration);
 
-			mat_with_alpha = cv::Mat(img.get_height_pixels(), img.get_width_pixels(), CV_8UC4, static_cast<void *>(img.get_buffer()));
+			//PointCloud::Ptr cloud(new PointCloud);
+			int color_image_width_pixels = rgbImage.get_width_pixels();
+			int color_image_height_pixels = rgbImage.get_height_pixels();
+			transformed_depthImage = NULL;
+			transformed_depthImage = k4a::image::create(K4A_IMAGE_FORMAT_DEPTH16,
+				color_image_width_pixels,
+				color_image_height_pixels,
+				color_image_width_pixels * (int)sizeof(uint16_t));
+			k4a::image point_cloud_image = NULL;
+			point_cloud_image = k4a::image::create(K4A_IMAGE_FORMAT_CUSTOM,
+				color_image_width_pixels,
+				color_image_height_pixels,
+				color_image_width_pixels * 3 * (int)sizeof(int16_t));
 
-			cv::cvtColor(mat_with_alpha, mat_no_alpha, cv::COLOR_BGRA2BGR);
-
-			return mat_no_alpha;
-		}
-};
-
-struct k4a_img_to_ir_context_t
-{
-		cv::Mat mat;
-		cv::Mat mat_8U;
-
-		cv::Mat & convert(k4a::image & img)
-		{
-			// ir
-			// * Each pixel of IR16 data is two bytes of little endian unsigned depth data. The value of the data represents
-			// * brightness.
-			describe_img(img, "ir");
-
-			mat = cv::Mat(img.get_height_pixels(), img.get_width_pixels(), CV_16U, static_cast<void *>(img.get_buffer()));
-
-			mat.convertTo(mat_8U, CV_8U);
-
-			return mat_8U;
-		}
-};
-
-
-struct depth_img_to_color_context_t
-{
-		k4a::calibration calibration;
-		k4a::transformation transformation;
-
-		depth_img_to_color_context_t(const DKCamera & camera) :
-				// Get the camera calibration for the entire K4A device, which is used for all transformation functions.
-				calibration(
-					camera.device.get_calibration(
-						camera.config.depth_mode,
-						camera.config.color_resolution
-					)
-				),
-				transformation(calibration)
-		{
-		}
-
-		k4a::image depth_img_regi_to_rgb; // 深度向 rgb 配准的图像
-		k4a::image points_cloud_img;
-
-		k4a::image & convert(const k4a::image & depth_img)
-		{
-			depth_img_regi_to_rgb = transformation.depth_image_to_color_camera(depth_img);
-			return depth_img_regi_to_rgb;
-		}
-
-		k4a::image& get_points_cloud_img()
-		{
-			this->points_cloud_img = transformation.depth_image_to_point_cloud(
-				this->depth_img_regi_to_rgb, K4A_CALIBRATION_TYPE_COLOR);
-			return this->points_cloud_img;
-		}
-};
-
-struct k4a_img_to_depth_context_t
-{
-		cv::Mat cv_depth;
-
-		cv::Mat & convert(k4a::image & depth_img)
-		{
-			cv_depth = cv::Mat(depth_img.get_height_pixels(), depth_img.get_width_pixels(), CV_16U,
-							   static_cast<void *>(depth_img.get_buffer()), static_cast<size_t>(depth_img.get_stride_bytes()));
-
-			return cv_depth;
-		}
-};
-
-
-struct k4a_img_to_pcl_context_t
-{
-	pcl::PointCloud<pcl::PointXYZRGB> pcl;
-
-	pcl::PointCloud<pcl::PointXYZRGB> & get_pcl(const k4a::image & pointClodImg)
-	{
-		pcl.clear();
-		pcl.width = pointClodImg.get_width_pixels();
-		pcl.height = pointClodImg.get_height_pixels();
-		std::size_t size = pcl.width * pcl.height;
-		pcl.resize(size);
-		pcl.is_dense = false;
-		const std::uint16_t* pointClodImg_buffer = reinterpret_cast<const std::uint16_t*>(pointClodImg.get_buffer());
-		for (std::size_t i = 0; i < size; ++i) {
-			pcl::PointXYZRGB point;
-			point.x = pointClodImg_buffer[3 * i + 0] / 10.0f;
-			point.y = pointClodImg_buffer[3 * i + 1] / 10.0f;
-			point.z = pointClodImg_buffer[3 * i + 2] / 10.0f;
-			//std::cout << point.x << "  " << point.y << "   " << point.z << std::endl;
-			//if (point.x == 0 && point.y == 0 && point.z == 0) {
-			//	continue;
-			//}
-
-			point.r = 128;
-			point.g = 128;
-			point.b = 128;
-			pcl[i] = point;
-		}
-		return this->pcl;
-	}
-};
-
-
-static const std::filesystem::path working_dir = R"(D:\dk.test\)";
-
-using namespace std::chrono_literals;
-
-auto start_time = 0h;
-auto end_time = 18h;
-auto prepare_time = 1min;
-
-enum class working_status
-{
-	SLEEP,
-	READY,
-	WORK,
-};
-
-static working_status judge(std::chrono::time_point<std::chrono::system_clock> now)
-{
-	const std::chrono::time_zone * tz = std::chrono::current_zone();
-	auto local_now = tz->to_local(now);
-	auto today_midnight = std::chrono::floor<std::chrono::days>(local_now);
-	auto time_since_midnight = local_now - today_midnight;
-
-	if (start_time <= time_since_midnight && time_since_midnight < end_time) {
-		return working_status::WORK;
-	}
-	auto t = (time_since_midnight + prepare_time) % 24h;
-	if (start_time <= t && t < end_time) {
-		return working_status::READY;
-	}
-	return working_status::SLEEP;
-}
-
-
-/**
- * 一个相机的工作线程
- */
-static void camera_working_thread(DKCamera & camera)
-{
-	std::filesystem::path camera_working_dir = working_dir / ("camera" + std::to_string(camera.device_id));
-
-	std::filesystem::path path_base_rgb = camera_working_dir / "rgb";
-	std::filesystem::path path_base_depth = camera_working_dir / "depth";
-	std::filesystem::path path_base_depth_rainbow = camera_working_dir / "rainbow";
-	std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
-	
-	k4a::capture capture;
-	k4a_img_to_rgb_no_alpha_context_t k4a_img_to_rgb_no_alpha_context;
-	depth_img_to_color_context_t depth_img_to_color_context(camera);
-	k4a_img_to_depth_context_t k4a_img_to_depth_context;
-	k4a_img_to_pcl_context_t k4a_img_to_pcl_context;
-
-	int count = 0;
-	while (true) {
-
-		auto start_time = std::chrono::system_clock::now();
-
-		working_status status = judge(start_time);
-		if (status == working_status::SLEEP) {
-			if (camera.enable) {
-				KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_id);
-				camera.stop();
+			if (depthImage.get_width_pixels() == rgbImage.get_width_pixels() && depthImage.get_height_pixels() == rgbImage.get_height_pixels()) {
+				std::copy(depthImage.get_buffer(), depthImage.get_buffer() + depthImage.get_height_pixels() * depthImage.get_width_pixels() * (int)sizeof(uint16_t), transformed_depthImage.get_buffer());
 			}
-			std::this_thread::sleep_for(1min);
-			continue;
-		} else {
-			if (!camera.enable) {
-				// 启动设备
-				KERBAL_LOG_WRITE(KINFO, "Camera {} is sleeping, try to wake up...", camera.device_id);
-				try {
-					camera.start();
-					KERBAL_LOG_WRITE(KINFO, "Camera {} has been started.", camera.device_id);
-				} catch (...) {
-					camera.enable = false;
-					KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_id);
-					std::this_thread::sleep_for(30s);
+			else {
+				k4aTransformation.depth_image_to_color_camera(depthImage, &transformed_depthImage);
+			}
+			k4aTransformation.depth_image_to_point_cloud(transformed_depthImage, K4A_CALIBRATION_TYPE_COLOR, &point_cloud_image);
+
+			pcl::PointCloud<PointT> cloud;
+			cloud.width = color_image_width_pixels;
+			cloud.height = color_image_height_pixels;
+			cloud.is_dense = false;
+			cloud.resize(static_cast<size_t>(color_image_width_pixels) * color_image_height_pixels);
+
+			const int16_t* point_cloud_image_data = reinterpret_cast<const int16_t*>(point_cloud_image.get_buffer());
+			const uint8_t* color_image_data = rgbImage.get_buffer();
+
+			for (int i = 0; i < color_image_width_pixels * color_image_height_pixels; i++) {
+				PointT point;
+
+				point.x = point_cloud_image_data[3 * i + 0] / 1000.0f;
+				point.y = point_cloud_image_data[3 * i + 1] / 1000.0f;
+				point.z = point_cloud_image_data[3 * i + 2] / 1000.0f;
+
+				//point.b = color_image_data[4 * i + 0];
+				//point.g = color_image_data[4 * i + 1];
+				//point.r = color_image_data[4 * i + 2];
+				uint8_t alpha = color_image_data[4 * i + 3];
+				if (point.x == 0 && point.y == 0 && point.z == 0 && alpha == 0)
 					continue;
-				}
-				try {
-					camera.stabilize();
-					KERBAL_LOG_WRITE(KINFO, "Camera {} has been stable.", camera.device_id);
-				} catch (...) {
-					camera.enable = false;
-					KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.", camera.device_id);
-					std::this_thread::sleep_for(30s);
-					continue;
-				}
+				cloud.points[i] = point;
 			}
+			pcl::io::savePLYFile("D:\\dk.test\\ply.ply", cloud);   //将点云数据保存为ply文件
 		}
-
-		
-		SYSTEMTIME time;
-		GetLocalTime(&time);
-		if (!(0 <= time.wMinute && time.wMinute <= 59)) {
-			using namespace std::chrono_literals;
-			std::this_thread::sleep_for(1s);
-			continue;
+		else {
+			std::cout << "false: K4A_WAIT_RESULT_TIMEOUT." << std::endl;
 		}
-
-		try {
-
-			bool capture_success = true;
-			try {
-				capture_success = camera.device.get_capture(&capture);
-			} catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
-				std::this_thread::sleep_until(start_time + 500ms);
-				continue;
-			}
-
-			if (!capture_success) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_id);
-				std::this_thread::sleep_until(start_time + 500ms);
-				continue;
-			}
-
-			
-			std::string date = current_date();
-			std::string timestamp = current_timestamp();
-
-
-			k4a::image rgbImage = capture.get_color_image();
-
-			const cv::Mat & cv_rgbImage_no_alpha = k4a_img_to_rgb_no_alpha_context.convert(rgbImage);
-			std::filesystem::path filename_rgb = path_base_rgb / date / (timestamp + ".png");
-			try {
-				save_cv_mat(cv_rgbImage_no_alpha, filename_rgb);
-			} catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: rgb save failed: {}", camera.device_id, filename_rgb.string());
-			}
-
-			bool handle_depth = true;
-			k4a::image depthImage = capture.get_depth_image();
-			k4a::image * depthImageTran = nullptr;
-			try {
-				depthImageTran = &depth_img_to_color_context.convert(depthImage);
-			} catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save transform failed", camera.device_id);
-				handle_depth = false;
-			}
-
-			if (handle_depth) {
-				const cv::Mat & cv_depth = k4a_img_to_depth_context.convert(*depthImageTran);
-				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
-				try {
-					save_cv_mat(cv_depth, filename_depth);
-				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_id, filename_depth.string());
-				}
-
-				const k4a::image & pointCloudImg = depth_img_to_color_context.get_points_cloud_img();
-				const auto & cloudPCL = k4a_img_to_pcl_context.get_pcl(pointCloudImg);
-				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");
-				try {
-					pcl::io::savePLYFile(filename_clouds.string(), cloudPCL);
-					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
-				}
-				catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds save failed: {}", camera.device_id, filename_depth.string());
-				}
-
-			}
-
-			count++;
-			KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handle done.", camera.device_id, count);
-
-		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: Unhandled exception.", camera.device_id);
-		}
-
-		using namespace std::chrono_literals;
-		std::this_thread::sleep_until(start_time + 480ms);
-
-	} // while
-
-}
-
-
-
-int main(int argc, char * argv[])
-{
-	// 找到并打开 Azure Kinect 设备
-	uint32_t device_count = k4a::device::get_installed_count(); // 发现已连接的设备数
-	if (0 == device_count) {
-		KERBAL_LOG_WRITE(KFATAL, "No camera found.");
-		exit(EXIT_FAILURE);
+		index++;
 	}
+	cv::destroyAllWindows();
+	rgb_out << flush;
+	d_out << flush;
+	rgb_out.close();
+	d_out.close();
 
-	KERBAL_LOG_WRITE(KINFO, "Found {} connected cameras.", device_count);
+	// 释放，关闭设备
+	rgbImage.reset();
+	depthImage.reset();
+	capture.reset();
+	device.close();
 
-
-	std::vector<DKCamera> cameras;
-	cameras.reserve(device_count);
-
-	std::map<std::string, std::tuple<int, k4a_device_configuration_t>> configurations = {
-			{"000642213912", {0, get_config_0()}},
-			{"001376414312", {1, get_config_1()}},
-			{"000574514912", {2, get_config_1()}},
-	};
-
-
-	for (uint32_t i = 0; i < device_count; ++i) {
-
-		// 打开设备
-		try {
-			k4a::device device = k4a::device::open(i);
-			std::string serialnum = device.get_serialnum();
-			KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serialnum);
-
-			auto it = configurations.find(serialnum);
-			k4a_device_configuration_t config;
-			int device_id;
-			if (it == configurations.cend()) { // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
-				device_id = 9999;
-				config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-			} else {
-				std::tie(device_id, config) = it->second;
-			}
-
-			cameras.emplace_back(std::move(device), device_id, std::move(config));
-		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camara {} open failed.", i);
-			continue;
-		}
-	}
-
-	KERBAL_LOG_WRITE(KINFO, "{} cameras have been opened.", cameras.size());
-
-	std::vector<std::thread> threads;
-	threads.reserve(cameras.size());
-	for (DKCamera & camera : cameras) {
-		threads.emplace_back(camera_working_thread, std::ref(camera));
-	}
-
-	// 等待所有线程结束
-	for (std::thread & thread: threads) {
-		thread.join();
-	}
-
-	KERBAL_LOG_WRITE(KINFO, "Good Bye!");
-
-	return EXIT_SUCCESS;
+	return 1;
 }
