@@ -288,7 +288,7 @@ static void camera_working_thread(DKCamera & camera)
 		}
 
 		using namespace std::chrono_literals;
-		std::this_thread::sleep_until(start_time + 500ms);
+		std::this_thread::sleep_until(start_time + 480ms);
 
 	} // while
 
