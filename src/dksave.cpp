@@ -78,26 +78,27 @@ enum class working_status
 
 static working_status judge(std::chrono::time_point<std::chrono::system_clock> now)
 {
-	const std::chrono::time_zone * tz = std::chrono::current_zone();
-	auto local_now = tz->to_local(now);
-	auto today_midnight = std::chrono::floor<std::chrono::days>(local_now);
-	auto time_since_midnight = local_now - today_midnight;
-
-	if (start_time <= time_since_midnight && time_since_midnight < end_time) {
-		auto min = time_since_midnight % 60min;
-		if (0min <= min && min <= 15min) {
-			return working_status::WORK;
-		}
-		if (59min <= min) {
-			return working_status::READY;
-		}
-		return working_status::SLEEP;
-	}
-	auto t = (time_since_midnight + prepare_time) % 24h;
-	if (start_time <= t && t < end_time) {
-		return working_status::READY;
-	}
-	return working_status::SLEEP;
+	return working_status::WORK;
+//	const std::chrono::time_zone * tz = std::chrono::current_zone();
+//	auto local_now = tz->to_local(now);
+//	auto today_midnight = std::chrono::floor<std::chrono::days>(local_now);
+//	auto time_since_midnight = local_now - today_midnight;
+//
+//	if (start_time <= time_since_midnight && time_since_midnight < end_time) {
+//		auto min = time_since_midnight % 60min;
+//		if (0min <= min && min <= 15min) {
+//			return working_status::WORK;
+//		}
+//		if (59min <= min) {
+//			return working_status::READY;
+//		}
+//		return working_status::SLEEP;
+//	}
+//	auto t = (time_since_midnight + prepare_time) % 24h;
+//	if (start_time <= t && t < end_time) {
+//		return working_status::READY;
+//	}
+//	return working_status::SLEEP;
 }
 
 
@@ -184,11 +185,11 @@ static void camera_working_thread(DKCamera & camera)
 
 			SYSTEMTIME time;
 			GetLocalTime(&time);
-			if (!(0 <= time.wMinute && time.wMinute <= 14)) {
-				using namespace std::chrono_literals;
-				std::this_thread::sleep_for(1s);
-				continue;
-			}
+//			if (!(0 <= time.wMinute && time.wMinute <= 14)) {
+//				using namespace std::chrono_literals;
+//				std::this_thread::sleep_for(1s);
+//				continue;
+//			}
 
 			std::string date = format_systime_to_date(time);
 			std::string timestamp = format_systime_to_timestamp(time);
