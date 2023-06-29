@@ -194,7 +194,14 @@ static working_status judge(std::chrono::time_point<std::chrono::system_clock> n
 	auto time_since_midnight = local_now - today_midnight;
 
 	if (start_time <= time_since_midnight && time_since_midnight < end_time) {
-		return working_status::WORK;
+		auto min = time_since_midnight % 60min;
+		if (0min <= min && min <= 15min) {
+			return working_status::WORK;
+		}
+		if (59min <= min) {
+			return working_status::READY;
+		}
+		return working_status::SLEEP;
 	}
 	auto t = (time_since_midnight + prepare_time) % 24h;
 	if (start_time <= t && t < end_time) {
