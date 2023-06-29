@@ -4,6 +4,9 @@ project(DKSave CXX)
 set(CMAKE_CXX_STANDARD 20)
 message(STATUS "${CMAKE_CXX_PLATFORMS}")
 
+add_compile_definitions(NOMINMAX)
+
+
 add_executable(dksave src/dksave.cpp)
 target_include_directories(dksave PUBLIC include)
 
