@@ -311,9 +311,10 @@ int main(int argc, char * argv[])
 	std::vector<DKCamera> cameras;
 	cameras.reserve(device_count);
 
-	std::map<std::string, k4a_device_configuration_t> configurations = {
-			{"000642213912", get_config_0()},
-			{"001376414312", get_config_1()},
+	std::map<std::string, std::tuple<int, k4a_device_configuration_t>> configurations = {
+			{"000642213912", {0, get_config_0()}},
+			{"001376414312", {1, get_config_1()}},
+			{"000574514912", {2, get_config_1()}},
 	};
 
 
@@ -326,13 +327,16 @@ int main(int argc, char * argv[])
 			KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serialnum);
 
 			auto it = configurations.find(serialnum);
-			k4a_device_configuration_t config = (
-					it == configurations.cend() ?
-					K4A_DEVICE_CONFIG_INIT_DISABLE_ALL :
-					it->second
-			); // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
+			k4a_device_configuration_t config;
+			int device_id;
+			if (it == configurations.cend()) { // 从 configurations 中查找配置参数, 查不到则使用 K4A_DEVICE_CONFIG_INIT_DISABLE_ALL
+				device_id = 9999;
+				config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+			} else {
+				std::tie(device_id, config) = it->second;
+			}
 
-			cameras.emplace_back(std::move(device), i, std::move(config));
+			cameras.emplace_back(std::move(device), device_id, std::move(config));
 		} catch (...) {
 			KERBAL_LOG_WRITE(KERROR, "Camara {} open failed.", i);
 			continue;
