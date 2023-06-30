@@ -72,8 +72,10 @@ namespace kerbal
 		}
 #   endif
 
+		SYSTEMTIME time;
+		GetLocalTime(&time);
 		std::string s = fmt::format("{}  {:9}  {}:{}  {}",
-									   current_time(),
+									   format_systime_to_time(time),
 									   log_level_description(level),
 									   src_file, line, std::move(info));
 
@@ -90,7 +92,7 @@ namespace kerbal
 
 
 #define KERBAL_LOG_WRITE(level, ...) do { \
-    kerbal::log_write(std::cout, __FILE__, __LINE__, level, fmt::format(__VA_ARGS__)); \
+	kerbal::log_write(std::cout, __FILE__, __LINE__, level, fmt::format(__VA_ARGS__)); \
 } while(0)
 
 #endif // KERBAL_LOGGER_HPP

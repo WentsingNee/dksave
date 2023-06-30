@@ -19,12 +19,7 @@ target_wih_ie(dksave avx2)
 
 find_package(OpenCV REQUIRED)
 
-if (${CMAKE_CXX_PLATFORM_ID} STREQUAL "Windows")
-	target_include_directories(dksave PUBLIC ${OpenCV_INCLUDE_DIRS})
-elseif (${CMAKE_CXX_PLATFORM_ID} STREQUAL "Linux")
-	target_include_directories(dksave PUBLIC "/usr/include/opencv4/")
-endif()
-
+target_include_directories(dksave PUBLIC ${OpenCV_INCLUDE_DIRS})
 message("OpenCV LIBS: ${OpenCV_LIBS}")
 target_link_libraries(dksave PUBLIC "${OpenCV_LIBS}")
 
@@ -63,8 +58,8 @@ message(STATUS "Finding local pcl")
 find_package(PCL QUIET)
 
 if (NOT ${PCL_FOUND})
-	set (PCL_DOWNLOAD_URL "https://github.com/PointCloudLibrary/pcl/releases/download/pcl-1.13.1/PCL-1.13.1-AllInOne-msvc2022-win64.exe")
-	set (PCL_INSTALL_FILE "${PROJECT_SOURCE_DIR}/PCL-1.13.1-AllInOne-msvc2022-win64.exe")
+	set(PCL_DOWNLOAD_URL "https://github.com/PointCloudLibrary/pcl/releases/download/pcl-1.13.1/PCL-1.13.1-AllInOne-msvc2022-win64.exe")
+	set(PCL_INSTALL_FILE "${PROJECT_SOURCE_DIR}/PCL-1.13.1-AllInOne-msvc2022-win64.exe")
 
 	if (NOT EXISTS ${PCL_ARCHIVE_FILE})
 		message(STATUS "Downloading ${PCL_DOWNLOAD_URL}")
