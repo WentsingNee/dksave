@@ -1,5 +1,14 @@
 
- 
-cmake ../ -DCMAKE_BUILD_TYPE=Release \
-	-DCMAKE_PREFIX_PATH="C:/Program Files/opencv/build/x64/vc16/lib/;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/lib/;C:/Program Files/PCL/" \
-	-DDKSAVE_K4A_INCLUDE_PATH="C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include"
+
+cmake ../ --fresh -DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_PREFIX_PATH="\
+C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/;\
+C:/Program Files/opencv/build/;\
+C:/Program Files (x86)/FMT/;\
+C:/Program Files/PCL 1.13.1/;\
+C:/Program Files (x86)/YAML_CPP/;\
+" \
+	-DCMAKE_INCLUDE_PATH="\
+C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;\
+"
+

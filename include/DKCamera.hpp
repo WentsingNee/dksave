@@ -22,15 +22,15 @@
 struct DKCamera
 {
 		k4a::device device;
-		int device_id;
+		std::string device_name;
 		k4a_device_configuration_t config;
 		bool enable;
 
 		DKCamera(
 			k4a::device && device,
-			int device_id,
+			std::string const & device_id,
 			k4a_device_configuration_t && config) :
-			device(std::move(device)), device_id(device_id), config(std::move(config)), enable(false)
+				device(std::move(device)), device_name(device_id), config(std::move(config)), enable(false)
 		{
 		}
 
@@ -38,7 +38,7 @@ struct DKCamera
 		{
 			device.start_cameras(&config);
 			enable = true;
-			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", device_id);
+			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", device_name);
 		}
 
 		// 稳定化

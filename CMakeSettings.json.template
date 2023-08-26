@@ -13,12 +13,12 @@
       "variables": [
         {
           "name": "CMAKE_PREFIX_PATH",
-          "value": "C:/Program Files/opencv/build/x64/vc16/lib/;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/lib/;C:/Program Files/PCL/",
+          "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/;C:/Program Files/opencv/build/;C:/Program Files (x86)/FMT/;C:/Program Files/PCL 1.13.1/;C:/Program Files (x86)/YAML_CPP/;\",
           "type": "PATH"
         },
         {
-          "name": "DKSAVE_K4A_INCLUDE_PATH",
-          "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/",
+          "name": "CMAKE_INCLUDE_PATH",
+          "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;",
           "type": "PATH"
         }
       ]
