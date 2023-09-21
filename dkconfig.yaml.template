@@ -23,19 +23,10 @@ config:
       device_name: "camera0" # 相机名称。此参数用于给相机起名字，也决定了此台相机的采集数据保存在 save_dir 路径下的哪个子文件夹中
                              # 比如 device_name 为 camera0 的相机的采集数据就保存在 working_dir/camera0 下
                              # 唯一要求是每台相机的 device_name 禁止有重名
-      camera_fps: 30
-      color_format: BGRA32
-      color_resolution: 720P
-      depth_mode: WFOV_2X2BINNED
+      k4a_config: *cameras_config_0
     "001376414312":
       device_name: "camera1"
-      camera_fps: 15
-      color_format: BGRA32
-      color_resolution: 1536P
-      depth_mode: WFOV_UNBINNED
+      k4a_config: *cameras_config_1
     "000574514912":
       device_name: "camera2"
-      camera_fps: 15
-      color_format: BGRA32
-      color_resolution: 1536P
-      depth_mode: WFOV_UNBINNED
+      k4a_config: *cameras_config_1

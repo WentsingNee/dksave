@@ -13,36 +13,61 @@
 #define DKSAVE_DKCAMERA_HPP
 
 #include <k4a/k4a.hpp>
-#include <windows.h>
-#include <shlwapi.h>
 
 #include "logger.hpp"
 
 
-struct DKCamera
+class DKCamera
 {
-		k4a::device device;
-		std::string device_name;
-		k4a_device_configuration_t config;
-		bool enable;
+		k4a::device k_device;
+		std::string k_device_name;
+		k4a_device_configuration_t k_config;
+		bool k_enable;
 
+	public:
 		DKCamera(
 			k4a::device && device,
-			std::string const & device_id,
+			std::string const & device_name,
 			k4a_device_configuration_t && config) :
-				device(std::move(device)), device_name(device_id), config(std::move(config)), enable(false)
+                k_device(std::move(device)),
+                k_device_name(device_name),
+                k_config(std::move(config)),
+                k_enable(false)
 		{
 		}
 
-		void start()
+        k4a::device & device()
+        {
+            return k_device;
+        }
+
+        std::string const & device_name() const
+        {
+            return k_device_name;
+        }
+
+		k4a_device_configuration_t const& config() const
 		{
-			device.start_cameras(&config);
-			enable = true;
-			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", device_name);
+			return k_config;
 		}
+
+		bool enable() const
+		{
+			return k_enable;
+		}
+
+		void start() try
+		{
+            k_device.start_cameras(&k_config);
+            k_enable = true;
+			KERBAL_LOG_WRITE(KINFO, "Start camera {}.", k_device_name);
+		} catch (...) {
+            k_enable = false;
+            throw;
+        }
 
 		// 稳定化
-		void stabilize()
+		void stabilize() try
 		{
 			k4a::capture capture;
 			int success = 0; //用来稳定，类似自动曝光
@@ -51,7 +76,7 @@ struct DKCamera
 			while (true) {
 				bool capture_success = true;
 				try {
-					capture_success = device.get_capture(&capture);
+					capture_success = k_device.get_capture(&capture);
 				} catch (...) {
 					capture_success = false;
 				}
@@ -76,56 +101,17 @@ struct DKCamera
 					}
 				}
 			}
-		}
+		} catch (...) {
+            k_enable = false;
+            throw;
+        }
 
 		void stop()
 		{
-			device.close();
-			enable = false;
+            k_device.stop_cameras();
+            k_enable = false;
 		}
 
 };
-
-
-inline k4a_device_configuration_t get_config_0()
-{
-	// 配置
-	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-	config.camera_fps = K4A_FRAMES_PER_SECOND_30;
-	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-
-	config.color_resolution = K4A_COLOR_RESOLUTION_720P;
-	//config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
-
-	//config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-	//config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-	config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
-	//config.depth_mode = K4A_DEPTH_MODE_WFOV_UNBINNED;
-
-	config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
-
-	return config;
-}
-
-
-inline k4a_device_configuration_t get_config_1()
-{
-	k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-	config.camera_fps = K4A_FRAMES_PER_SECOND_15;
-	config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-
-	//config.color_resolution = K4A_COLOR_RESOLUTION_720P;
-	config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
-
-	//config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-	//config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-	//config.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
-	config.depth_mode = K4A_DEPTH_MODE_WFOV_UNBINNED;
-
-	config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
-
-	return config;
-}
-
 
 #endif // DKSAVE_DKCAMERA_HPP

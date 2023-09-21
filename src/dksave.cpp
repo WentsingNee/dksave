@@ -141,7 +141,7 @@ static working_status get_working_status(std::chrono::time_point<std::chrono::sy
  */
 static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds sleep_period)
 {
-	std::filesystem::path camera_working_dir = working_dir / camera.device_name;
+	std::filesystem::path camera_working_dir = working_dir / camera.device_name();
 
 	std::filesystem::path path_base_color = camera_working_dir / "rgb";
 	std::filesystem::path path_base_depth = camera_working_dir / "depth";
@@ -155,9 +155,9 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 
 	k4a::capture capture;
 	k4a::transformation transformation(
-			camera.device.get_calibration(
-					camera.config.depth_mode,
-					camera.config.color_resolution
+			camera.device().get_calibration(
+					camera.config().depth_mode,
+					camera.config().color_resolution
 			)
 	);
 
@@ -176,35 +176,33 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 		}
 
 		if (status == working_status::SLEEP) {
-			if (camera.enable) {
-				KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_name);
+			if (camera.enable()) {
+				KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_name());
 				camera.stop();
 			}
 			std::this_thread::sleep_for(1min);
 			continue;
 		} else {
-			if (!camera.enable) {
+			if (!camera.enable()) {
 				// 启动设备
-				KERBAL_LOG_WRITE(KINFO, "Camera {} is sleeping, try to wake up...", camera.device_name);
+				KERBAL_LOG_WRITE(KINFO, "Camera {} is sleeping, try to wake up...", camera.device_name());
 				try {
 					camera.start();
-					KERBAL_LOG_WRITE(KINFO, "Camera {} has been started.", camera.device_name);
+					KERBAL_LOG_WRITE(KINFO, "Camera {} has been started.", camera.device_name());
 				} catch (...) {
-					camera.enable = false;
-					KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_name);
+					KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_name());
 					std::this_thread::sleep_for(30s);
 					continue;
 				}
 				try {
 					camera.stabilize();
-					KERBAL_LOG_WRITE(KINFO, "Camera {} has been stable.", camera.device_name);
+					KERBAL_LOG_WRITE(KINFO, "Camera {} has been stable.", camera.device_name());
 				} catch (...) {
-					camera.enable = false;
-					KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.", camera.device_name);
+					KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.", camera.device_name());
 					std::this_thread::sleep_for(30s);
 					continue;
 				}
-			}
+            }
 		}
 
 
@@ -212,15 +210,15 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 
 			bool capture_success = false;
 			try {
-				capture_success = camera.device.get_capture(&capture);
+				capture_success = camera.device().get_capture(&capture);
 			} catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_name);
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_name());
 				std::this_thread::sleep_for(500ms);
 				continue;
 			}
 
 			if (!capture_success) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_name);
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera.device_name());
 				std::this_thread::sleep_for(500ms);
 				continue;
 			}
@@ -238,7 +236,7 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 			try {
 				save_cv_mat(cv_color_img_without_alpha, filename_color);
 			} catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: color save failed: {}", camera.device_name, filename_color.string());
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: color image saved failed: {}", camera.device_name(), filename_color.string());
 			}
 
 			bool handle_depth = true;
@@ -247,7 +245,7 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 			try {
 				k4a_img_depth_transformed_to_color = &k4a_img_depth_transform_to_color_mode_context.transform(transformation, k4a_img_depth);
 			} catch (...) {
-				KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save transform failed", camera.device_name);
+				KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image transformation to color failed", camera.device_name());
 				handle_depth = false;
 			}
 
@@ -257,7 +255,7 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 				try {
 					save_cv_mat(cv_depth_img, filename_depth);
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth save failed: {}", camera.device_name, filename_depth.string());
+					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image saved failed: {}", camera.device_name(), filename_depth.string());
 				}
 
 //				const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed_to_color);
@@ -268,16 +266,16 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 //					pcl::io::savePLYFile(filename_clouds.string(), pcl_point_cloud);
 //					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
 //				} catch (...) {
-//					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds save failed: {}", camera.device_id, filename_depth.string());
+//					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds saved failed: {}", camera.device_name(), filename_depth.string());
 //				}
 
 			}
 
 			count++;
-			KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handle done.", camera.device_name, count);
+			KERBAL_LOG_WRITE(KINFO, "Camera {}: Frame {} handled done.", camera.device_name(), count);
 
 		} catch (...) {
-			KERBAL_LOG_WRITE(KERROR, "Camera {}: Unhandled exception.", camera.device_name);
+			KERBAL_LOG_WRITE(KERROR, "Camera {}: Unhandled exception.", camera.device_name());
 		}
 
 		using namespace std::chrono_literals;
@@ -290,7 +288,7 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 
 static
 std::vector<DKCamera>
-find_and_open_cameras(YAML::Node & yaml_root_node)
+find_and_open_cameras(YAML::Node & yaml_config)
 {
 	// 找到并打开 Azure Kinect 设备
 	uint32_t device_count = k4a::device::get_installed_count(); // 发现已连接的设备数
@@ -307,8 +305,6 @@ find_and_open_cameras(YAML::Node & yaml_root_node)
 	cameras.reserve(device_count);
 
 
-	YAML::Node yaml_config = yaml_root_node["config"];
-
 	for (uint32_t i = 0; i < device_count; ++i) {
 
 		// 打开设备
@@ -317,23 +313,29 @@ find_and_open_cameras(YAML::Node & yaml_root_node)
 			std::string serial_num = device.get_serialnum();
 			KERBAL_LOG_WRITE(KINFO, "Serial num of camara {} is {}", i, serial_num);
 
-			YAML::Node camera_config = yaml_config["cameras"][serial_num];
-			if (!camera_config) {
+			YAML::Node camera_node = yaml_config["cameras"][serial_num];
+			if (!camera_node) {
 				KERBAL_LOG_WRITE(KWARNING, "there is no configuration in yaml. serial_num: {}", serial_num);
 				continue;
 			}
 
-			k4a_device_configuration_t config = yaml_to_k4a_config(camera_config);
+			YAML::Node camera_k4a_config_node = camera_node["k4a_config"];
+			if (!camera_k4a_config_node) {
+				KERBAL_LOG_WRITE(KWARNING, "there is no k4a_config in yaml. serial_num: {}", serial_num);
+				continue;
+			}
+
+			k4a_device_configuration_t config = yaml_to_k4a_config(camera_k4a_config_node);
 			std::string device_name;
 			try {
-				device_name = camera_config["device_name"].as<std::string>();
+				device_name = camera_node["device_name"].as<std::string>();
 			} catch (std::exception const & e) {
-				KERBAL_LOG_WRITE(KFATAL, "Parse device_id failed. exception type: {}, what: {}", typeid(e).name(), e.what());
+				KERBAL_LOG_WRITE(KFATAL, "Parse device_name failed. exception type: {}, what: {}", typeid(e).name(), e.what());
 				throw;
 			}
 
 			if (device_name_used.find(device_name) != device_name_used.cend()) {
-				KERBAL_LOG_WRITE(KFATAL, "device_id: {} has been occupied.", device_name);
+				KERBAL_LOG_WRITE(KFATAL, "device_name: {} has been occupied.", device_name);
 				exit(EXIT_FAILURE);
 			}
 			device_name_used.insert(device_name);
@@ -392,10 +394,11 @@ int main(int argc, char * argv[]) try
 		throw;
 	}
 
+    YAML::Node config_node = yaml_root_node["config"];
 
 	try {
 		std::string working_dir_str;
-		working_dir_str = yaml_root_node["config"]["working_dir"].as<std::string>();
+		working_dir_str = config_node["working_dir"].as<std::string>();
 		working_dir = std::filesystem::path(working_dir_str);
 		KERBAL_LOG_WRITE(KINFO, "Parse sleep_period success. working_dir: {}", working_dir_str);
 	} catch (YAML::InvalidNode const & e) {
@@ -406,7 +409,7 @@ int main(int argc, char * argv[]) try
 
 	std::chrono::milliseconds sleep_period;
 	try {
-		int sleep_period_i = yaml_root_node["config"]["sleep_period"].as<int>();
+		int sleep_period_i = config_node["sleep_period"].as<int>();
 		sleep_period = std::chrono::milliseconds(sleep_period_i);
 		KERBAL_LOG_WRITE(KINFO, "Parse sleep_period success. sleep_period: {} ms", sleep_period.count());
 	} catch (YAML::InvalidNode const & e) {
@@ -416,7 +419,7 @@ int main(int argc, char * argv[]) try
 
 
 	try {
-		std::string s = yaml_root_node["config"]["start_time"].as<std::string>();
+		std::string s = config_node["start_time"].as<std::string>();
 		start_time = parse_clock(s);
 		KERBAL_LOG_WRITE(KINFO, "Parse start_time success. start_time: {}", s);
 	} catch (YAML::InvalidNode const & e) {
@@ -429,7 +432,7 @@ int main(int argc, char * argv[]) try
 
 
 	try {
-		std::string s = yaml_root_node["config"]["end_time"].as<std::string>();
+		std::string s = config_node["end_time"].as<std::string>();
 		end_time = parse_clock(s);
 		KERBAL_LOG_WRITE(KINFO, "Parse end_time success. end_time: {}", s);
 	} catch (YAML::InvalidNode const & e) {
@@ -442,7 +445,7 @@ int main(int argc, char * argv[]) try
 
 
 
-	std::vector<DKCamera> cameras = find_and_open_cameras(yaml_root_node);
+	std::vector<DKCamera> cameras = find_and_open_cameras(config_node);
 
 	std::vector<std::thread> threads;
 	threads.reserve(cameras.size());
