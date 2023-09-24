@@ -7,7 +7,10 @@ message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
 
 
-include_directories("${CMAKE_INCLUDE_PATH}")
+if (DEFINED CMAKE_INCLUDE_PATH)
+    include_directories("${CMAKE_INCLUDE_PATH}")
+endif ()
+
 add_compile_definitions(NOMINMAX)
 
 
@@ -28,8 +31,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/third_party/opencv.cmake)
 # fmt
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/fmt.cmake)
 
-# pcl
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/pcl.cmake)
+## pcl
+#include(${CMAKE_SOURCE_DIR}/cmake/third_party/pcl.cmake)
 
 # yaml-cpp
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/yaml-cpp.cmake)

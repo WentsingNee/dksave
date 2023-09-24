@@ -34,13 +34,15 @@
 #include <k4a/k4a.hpp>
 
 // PCL
-#include <pcl/io/ply_io.h>
+#if DKSAVE_SUPPORT_PCL
+#   include <pcl/io/ply_io.h>
+#endif
 
 
 static void describe_img(const k4a::image & img, const char type[])
 {
 	KERBAL_LOG_WRITE(KDEBUG, "[{}]", type);
-	KERBAL_LOG_WRITE(KDEBUG, "format: {}", img.get_format());
+//	KERBAL_LOG_WRITE(KDEBUG, "format: {}", img.get_format());
 	KERBAL_LOG_WRITE(KDEBUG, "device_timestamp: {}", img.get_device_timestamp().count());
 	KERBAL_LOG_WRITE(KDEBUG, "system_timestamp: {}", img.get_system_timestamp().count());
 	KERBAL_LOG_WRITE(KDEBUG, "height: {}, width: {}", img.get_height_pixels(), img.get_width_pixels());
@@ -151,7 +153,10 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 	k4a_img_depth_transform_to_color_mode_context_t k4a_img_depth_transform_to_color_mode_context;
 	k4a_img_depth_to_cv_mat_context_t k4a_img_to_cv_mat_depth_context;
 	k4a_img_depth_transform_to_point_cloud_mode_context_t k4a_img_depth_transform_to_point_cloud_mode_context;
+
+#if DKSAVE_SUPPORT_PCL
 	k4a_img_point_cloud_to_pcl_point_cloud_context_t k4a_img_point_cloud_to_pcl_point_cloud_context;
+#endif
 
 	k4a::capture capture;
 	k4a::transformation transformation(
@@ -258,16 +263,18 @@ static void camera_working_thread(DKCamera & camera, std::chrono::milliseconds s
 					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image saved failed: {}", camera.device_name(), filename_depth.string());
 				}
 
-//				const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed_to_color);
-//				const pcl::PointCloud<pcl::PointXYZ> & pcl_point_cloud = k4a_img_point_cloud_to_pcl_point_cloud_context.convert(k4a_img_point_cloud);
-//				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");
-//				try {
-//					std::filesystem::create_directories(filename_clouds.parent_path());
-//					pcl::io::savePLYFile(filename_clouds.string(), pcl_point_cloud);
-//					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
-//				} catch (...) {
-//					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds saved failed: {}", camera.device_name(), filename_depth.string());
-//				}
+#if DKSAVE_SUPPORT_PCL
+				const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed_to_color);
+				const pcl::PointCloud<pcl::PointXYZ> & pcl_point_cloud = k4a_img_point_cloud_to_pcl_point_cloud_context.convert(k4a_img_point_cloud);
+				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");
+				try {
+					std::filesystem::create_directories(filename_clouds.parent_path());
+					pcl::io::savePLYFile(filename_clouds.string(), pcl_point_cloud);
+					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
+				} catch (...) {
+					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds saved failed: {}", camera.device_name(), filename_depth.string());
+				}
+#endif
 
 			}
 
