@@ -6,15 +6,10 @@ message(STATUS "CMAKE_CXX_PLATFORM_ID: ${CMAKE_CXX_PLATFORM_ID}")
 message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
 
-
-if (DEFINED CMAKE_INCLUDE_PATH)
-    include_directories("${CMAKE_INCLUDE_PATH}")
-endif ()
-
 add_compile_definitions(NOMINMAX)
 
 
-add_executable(dksave src/dksave.cpp)
+add_executable(dksave src/main.cpp include/ucamera.hpp)
 target_include_directories(dksave PUBLIC include)
 
 
@@ -22,8 +17,16 @@ include(${CMAKE_SOURCE_DIR}/cmake/instruction_extensions.cmake)
 target_wih_ie(dksave avx2)
 
 
+option(DKSAVE_ENABLE_K4A "with k4a cameras support" OFF)
+option(DKSAVE_ENABLE_OB "with ob cameras support" OFF)
+option(DKSAVE_ENABLE_PCL "with pcl point cloud library support" OFF)
+
+
 # K4A
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/k4a.cmake)
+
+# OB
+include(${CMAKE_SOURCE_DIR}/cmake/third_party/ob.cmake)
 
 # OpenCV
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/opencv.cmake)
@@ -31,8 +34,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/third_party/opencv.cmake)
 # fmt
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/fmt.cmake)
 
-## pcl
-#include(${CMAKE_SOURCE_DIR}/cmake/third_party/pcl.cmake)
+# pcl
+include(${CMAKE_SOURCE_DIR}/cmake/third_party/pcl.cmake)
 
 # yaml-cpp
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/yaml-cpp.cmake)

@@ -1,11 +1,11 @@
-cameras_config_template: # 相机配置参数模板
-  cameras_config_0: &cameras_config_0 # 饲喂栏上方相机配置参数
+k4a_camera_config_template: # 相机配置参数模板
+  k4a_camera_config_0: &k4a_camera_config_0 # 饲喂栏上方相机配置参数
     camera_fps: 30 # 快门 fps，可以填的值有：[5, 15, 30]
     color_format: BGRA32 # 色彩格式，目前只支持填 BGRA32
     color_resolution: 720P # 分辨率，可以填的值有：[OFF, 720P, 1080P, 1440P, 1536P, 2160P, 3072P]
     depth_mode: WFOV_2X2BINNED # 深度模式，可以填的值有：[OFF, NFOV_2X2BINNED, NFOV_UNBINNED, WFOV_2X2BINNED, WFOV_UNBINNED, PASSIVE_IR]
 
-  cameras_config_1: &cameras_config_1 # 猪舍正上方相机配置参数
+  k4a_camera_config_1: &k4a_camera_config_1 # 猪舍正上方相机配置参数
     camera_fps: 15
     color_format: BGRA32
     color_resolution: 1536P
@@ -18,15 +18,15 @@ config:
   sleep_period: 480 # 每帧之间的睡眠周期. 单位：毫秒，此参数控制每帧之间的采集频率。如无限制则填 0。
                     # 注意应当为每帧循环内其他指令的执行留有一定的时间。比如如果需要每台相机每通道每秒采集 2 帧的话，
                     # 建议设为 480 毫秒而不是 500 毫秒
-  cameras: # cameras 下对应每台 DK 相机的配置参数，键名为相机的序列号
+  k4a_cameras: # k4a_cameras 下对应每台 DK 相机的配置参数，键名为相机的序列号
     "000642213912":
       device_name: "camera0" # 相机名称。此参数用于给相机起名字，也决定了此台相机的采集数据保存在 save_dir 路径下的哪个子文件夹中
                              # 比如 device_name 为 camera0 的相机的采集数据就保存在 working_dir/camera0 下
                              # 唯一要求是每台相机的 device_name 禁止有重名
-      k4a_config: *cameras_config_0
+      config: *k4a_camera_config_0
     "001376414312":
       device_name: "camera1"
-      k4a_config: *cameras_config_1
+      config: *k4a_camera_config_1
     "000574514912":
       device_name: "camera2"
-      k4a_config: *cameras_config_1
+      config: *k4a_camera_config_1

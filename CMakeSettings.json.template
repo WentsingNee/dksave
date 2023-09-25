@@ -13,12 +13,7 @@
       "variables": [
         {
           "name": "CMAKE_PREFIX_PATH",
-          "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/;C:/Program Files/opencv/build/;third_party.prepare/fmt_v9.1.0/;C:/Program Files/PCL 1.13.1/;/third_party.prepare/yaml-cpp_v0.8.0/;",
-          "type": "PATH"
-        },
-        {
-          "name": "CMAKE_INCLUDE_PATH",
-          "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;",
+          "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;C:/Program Files/opencv/build/;C:/Program Files (x86)/FMT/;C:/Program Files (x86)/YAML_CPP/;C:/Program Files/PCL 1.13.1/;C:/Program Files/OrbbecSDK_v1.6.3/SDK/lib;C:/Program Files/OrbbecSDK_v1.6.3/SDK/include;",
           "type": "PATH"
         }
       ]

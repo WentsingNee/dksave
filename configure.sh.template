@@ -1,14 +1,15 @@
 
 
 cmake ../ --fresh -DCMAKE_BUILD_TYPE=Release \
-	-DCMAKE_PREFIX_PATH="\
+  -DCMAKE_PREFIX_PATH="\
 C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/;\
+C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;\
 C:/Program Files/opencv/build/;\
 C:/Program Files (x86)/FMT/;\
-C:/Program Files/PCL 1.13.1/;\
 C:/Program Files (x86)/YAML_CPP/;\
+C:/Program Files/PCL 1.13.1/;\
+C:/Users/Peter/Downloads/OrbbecSDK_C_C++_v1.7.4_20230913_c948fa476_win_x64_release/OrbbecSDK_v1.7.4/SDK/lib;\
+C:/Users/Peter/Downloads/OrbbecSDK_C_C++_v1.7.4_20230913_c948fa476_win_x64_release/OrbbecSDK_v1.7.4/SDK/include;\
 " \
-	-DCMAKE_INCLUDE_PATH="\
-C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;\
-"
+  -DDKSAVE_ENABLE_K4A=ON -DDKSAVE_ENABLE_OB=ON
 

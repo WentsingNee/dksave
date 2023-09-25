@@ -1,9 +1,16 @@
-//
-// Created by WentsingNee on 2023/8/26.
-//
+/**
+ * @file       k4a_config.hpp
+ * @brief
+ * @date       2023-08-26
+ * @author     Peter
+ * @copyright
+ *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
+ *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *   all rights reserved
+ */
 
-#ifndef DKSAVE_DKCONFIG_HPP
-#define DKSAVE_DKCONFIG_HPP
+#ifndef DKSAVE_K4A_CONFIG_HPP
+#define DKSAVE_K4A_CONFIG_HPP
 
 #include <k4a/k4a.hpp>
 
@@ -244,4 +251,4 @@ class fmt::formatter<k4a_device_configuration_t>
 };
 
 
-#endif //DKSAVE_DKCONFIG_HPP
+#endif // DKSAVE_K4A_CONFIG_HPP
