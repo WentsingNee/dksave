@@ -15,19 +15,27 @@
 
 #include "ucamera.hpp"
 
-#include <memory>
-#include <vector>
-
 #include <yaml-cpp/node/node.h>
 
+#include <kerbal/container/vector.hpp>
+#include <kerbal/utility/tuple.hpp>
 
-class ucamera_factory
-{
-	public:
-		virtual ~ucamera_factory() = default;
 
-		virtual std::vector<std::unique_ptr<ucamera> >
-		find_cameras(YAML::Node &yaml_config) = 0;
+template <typename Factory>
+concept ucamera_factory = requires (YAML::Node const &yaml_config) {
+	{ Factory::find_cameras(yaml_config) };
 };
 
-#endif //DKSAVE_UCAMERAFACTOR_HPP
+
+template <int _, ucamera_factory ... Factory>
+struct ucamera_factories :
+		kerbal::utility::tuple<Factory...>
+{
+	private:
+		using super = kerbal::utility::tuple<Factory...>;
+
+	public:
+		ucamera_factories() = default;
+};
+
+#endif // DKSAVE_UCAMERAFACTOR_HPP

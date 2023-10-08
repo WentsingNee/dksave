@@ -39,3 +39,9 @@ include(${CMAKE_SOURCE_DIR}/cmake/third_party/pcl.cmake)
 
 # yaml-cpp
 include(${CMAKE_SOURCE_DIR}/cmake/third_party/yaml-cpp.cmake)
+
+find_package(Kerbal REQUIRED)
+target_link_libraries(dksave PUBLIC kerbal::Kerbal)
+target_compile_options(dksave PRIVATE /Zc:__cplusplus)
+add_compile_definitions(KERBAL_ENABLE_MODULES_EXPORT=0)
+

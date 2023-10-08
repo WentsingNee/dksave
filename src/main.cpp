@@ -20,7 +20,6 @@
 
 #include <chrono>
 #include <string>
-#include <vector>
 #include <thread>
 #include <memory>
 #include <filesystem>
@@ -29,6 +28,8 @@
 // YAML-CPP
 #include <yaml-cpp/yaml.h>
 
+#include <kerbal/container/vector.hpp>
+#include <kerbal/utility/tuple.hpp>
 
 
 static std::filesystem::path working_dir = R"(D:\dk.test\)";
@@ -45,8 +46,17 @@ static std::chrono::seconds parse_clock(std::string const & s)
 	}
 
 	int hour = std::stoi(s.substr(0, 2));
+	if (hour < 0 || hour >= 24) {
+		throw std::runtime_error("unreasonable hour in clock");
+	}
 	int min = std::stoi(s.substr(3, 2));
+	if (min < 0 || min >= 60) {
+		throw std::runtime_error("unreasonable minute in clock");
+	}
 	int sec = std::stoi(s.substr(6, 2));
+	if (sec < 0 || sec >= 60) {
+		throw std::runtime_error("unreasonable second in clock");
+	}
 	return std::chrono::hours(hour) + std::chrono::minutes(min) + std::chrono::seconds(sec);
 }
 
@@ -89,6 +99,39 @@ static void parse_global_settings(YAML::Node const & config_node)
 		KERBAL_LOG_WRITE(KINFO, "Parse end_time success. end_time: {}", s);
 	});
 
+	parse_field("log_level", [&config_node]() {
+		std::string s = config_node["log_level"].as<std::string>();
+		KERBAL_LOG_WRITE(KINFO, "Parse log_level success. log_level: {}", s);
+
+		if (s == "KDEBUG") {
+			kerbal::log::set_log_level(KDEBUG);
+			return;
+		}
+		if (s == "KVERBOSE") {
+			kerbal::log::set_log_level(KVERBOSE);
+			return;
+		}
+		if (s == "KINFO") {
+			kerbal::log::set_log_level(KINFO);
+			return;
+		}
+		if (s == "KWARNING") {
+			kerbal::log::set_log_level(KWARNING);
+			return;
+		}
+		if (s == "KERROR") {
+			kerbal::log::set_log_level(KERROR);
+			return;
+		}
+		if (s == "KFATAL") {
+			kerbal::log::set_log_level(KFATAL);
+			return;
+		}
+
+		KERBAL_LOG_WRITE(KFATAL, "Unknown log level. log_level: {}", s);
+		throw std::runtime_error("Unknown log level");
+	});
+
 }
 
 
@@ -129,33 +172,108 @@ int main(int argc, char * argv[]) try
 	YAML::Node config_node = yaml_root_node["config"];
 	parse_global_settings(config_node);
 
-	std::vector<std::unique_ptr<ucamera_factory> > factories;
-
+	ucamera_factories<
+			0
 #if DKSAVE_ENABLE_K4A
-	factories.push_back(std::make_unique<k4a_camera_factory>());
+			, dksave_k4a::camera_factory
 #endif
-
 #if DKSAVE_ENABLE_OB
-	factories.push_back(std::make_unique<ob_camera_factory>());
+			, dksave_ob::camera_factory
 #endif
+	> factories {};
 
-	std::vector<std::unique_ptr<ucamera> > ucameras;
 
-	for (auto & factory : factories) {
-		std::vector<std::unique_ptr<ucamera> > cameras = factory->find_cameras(config_node);
-		for (auto & camera: cameras) {
-			ucameras.push_back(std::move(camera));
+	kerbal::utility::tuple cameras_collections = factories.transform([&config_node](auto _, ucamera_factory auto factory) {
+		return factory.find_cameras(config_node);
+	});
+
+	kerbal::container::vector<std::thread> threads;
+	cameras_collections.for_each([&threads](auto _, auto & cameras) {
+		for (ucamera auto & camera: cameras) {
+			threads.emplace_back([&camera]() {
+				using camera_t = std::remove_reference_t<decltype(camera)>;
+				typename camera_t::capture_loop_context ctx(&camera, working_dir);
+				while (true) {
+					using namespace std::chrono_literals;
+
+					auto start_time = std::chrono::system_clock::now();
+
+					working_status status = get_working_status(start_time);
+
+					if (status != camera.previous_status) {
+						KERBAL_LOG_WRITE(KINFO, "Switch status from {} to {}.", camera.previous_status, status);
+						camera.previous_status = status;
+					}
+
+					if (status == working_status::SLEEP) {
+						if (camera.enable()) {
+							KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_name());
+							camera.stop();
+						}
+						std::this_thread::sleep_for(1min);
+						return;
+					} else {
+						if (!camera.enable()) {
+							// 启动设备
+							KERBAL_LOG_WRITE(KINFO, "Camera {} is sleeping, try to wake up...", camera.device_name());
+							try {
+								camera.start();
+								KERBAL_LOG_WRITE(KINFO, "Camera {} has been started.", camera.device_name());
+							} catch (...) {
+								KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_name());
+								std::this_thread::sleep_for(30s);
+								return;
+							}
+							try {
+								camera.stabilize();
+								KERBAL_LOG_WRITE(KINFO, "Camera {} has been stable.", camera.device_name());
+							} catch (...) {
+								KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.",
+												 camera.device_name());
+								std::this_thread::sleep_for(30s);
+								return;
+							}
+						}
+					}
+
+					try {
+						ctx.do_capture();
+
+						SYSTEMTIME time;
+						GetLocalTime(&time);
+
+						std::string date = format_systime_to_date(time);
+						std::string timestamp = format_systime_to_timestamp(time);
+
+						KERBAL_LOG_WRITE(KDEBUG, "Handling color. camera: {}, frame_count: {}", camera.device_name(),
+										 ctx.frame_count);
+						ctx.handle_color(date, timestamp);
+						KERBAL_LOG_WRITE(KVERBOSE, "Color handled done. camera: {}, frame_count: {}", camera.device_name(),
+										 ctx.frame_count);
+
+						KERBAL_LOG_WRITE(KDEBUG, "Handling depth. camera: {}, frame_count: {}", camera.device_name(),
+										 ctx.frame_count);
+						ctx.handle_depth(date, timestamp);
+						KERBAL_LOG_WRITE(KVERBOSE, "Depth handled done. camera: {}, frame_count: {}", camera.device_name(),
+										 ctx.frame_count);
+
+
+						ctx.frame_count++;
+						KERBAL_LOG_WRITE(KINFO, "Frame handled done. camera: {}, frame_count: {}", camera.device_name(),
+										 ctx.frame_count);
+					} catch (std::exception const &e) {
+						KERBAL_LOG_WRITE(KERROR, "Unhandled exception. camera: {}, exception type: {}, what: {}",
+										 camera.device_name(),
+										 typeid(e).name(), e.what());
+					} catch (...) {
+						KERBAL_LOG_WRITE(KERROR, "Unhandled exception. camera: {}, exception type: unknown",
+										 camera.device_name());
+					}
+					std::this_thread::sleep_until(start_time + sleep_period);
+				}
+			});
 		}
-	}
-
-
-	std::vector<std::thread> threads;
-	threads.reserve(ucameras.size());
-	for (auto & ucamera: ucameras) {
-		threads.emplace_back([&ucamera]() {
-			ucamera->working_loop(working_dir, sleep_period);
-		});
-	}
+	});
 
 	// 等待所有线程结束
 	for (std::thread & thread: threads) {

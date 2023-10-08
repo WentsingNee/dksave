@@ -12,42 +12,53 @@
 #ifndef DKSAVE_UCAMERA_HPP
 #define DKSAVE_UCAMERA_HPP
 
+#include "working_status.hpp"
+
 #include <string>
-#include <filesystem>
 
 
-class ucamera {
+class ucamera_base {
 
-protected:
+	protected:
+		std::string k_device_name;
+		bool k_enable;
+		working_status previous_status = working_status::WORK;
 
-    std::string k_device_name;
-    bool k_enable;
+	protected:
+		ucamera_base(std::string const &device_name) :
+				k_device_name(device_name),
+				k_enable(false) {
+		}
 
-public:
+	public:
+		std::string const &device_name() const {
+			return k_device_name;
+		}
 
-    ucamera(std::string const &device_name) :
-            k_device_name(device_name),
-            k_enable(false) {
-    }
+		bool enable() const {
+			return k_enable;
+		}
+};
 
-    virtual ~ucamera() = default;
 
-    std::string const & device_name() const
-    {
-        return k_device_name;
-    }
+template<typename Context>
+concept capture_loop_context = requires(Context & context, std::string const &date, std::string const &timestamp) {
+	{ context.do_capture() };
+	{ context.handle_color(date, timestamp) };
+	{ context.handle_depth(date, timestamp) };
+};
 
-    bool enable() const
-    {
-        return k_enable;
-    }
-
-    virtual void start() = 0;
-    virtual void stabilize() = 0;
-    virtual void stop() noexcept = 0;
-
-	virtual void working_loop(std::filesystem::path const & working_dir, std::chrono::milliseconds sleep_period) = 0;
-
+template<typename Camera>
+concept ucamera = requires(Camera & camera, Camera const & kcamera)
+{
+	{ camera.previous_status } -> std::same_as<working_status &>;
+	{ kcamera.device_name() } -> std::convertible_to<std::string>;
+	{ kcamera.enable() } -> std::convertible_to<bool>;
+	{ camera.start() };
+	{ camera.stabilize() };
+	{ camera.stop() };
+	requires noexcept(camera.stop());
+	capture_loop_context<typename Camera::capture_loop_context>;
 };
 
 #endif //DKSAVE_UCAMERA_HPP

@@ -17,36 +17,100 @@
 #include "logger.hpp"
 
 #include <string>
-#include <set>
-#include <map>
-#include <memory>
-#include <vector>
 
 #include <cstdlib>
 
 #include <libobsensor/ObSensor.hpp>
 #include <yaml-cpp/yaml.h>
 
+#include <kerbal/container/avl_set.hpp>
+#include <kerbal/container/vector.hpp>
 
-class ob_camera_factory : public ucamera_factory {
 
-	public:
-		virtual
-		std::vector<std::unique_ptr<ucamera> >
-		find_cameras(YAML::Node &yaml_config) override {
-			std::vector<std::unique_ptr<ucamera> > cameras;
-			std::set<std::string> device_name_used;
+namespace dksave_ob {
 
-			ob::Context ctx;
+	struct find_cameras_context {
+		kerbal::container::vector<dksave_ob::camera> cameras;
+		kerbal::container::avl_set<std::string> device_name_used;
+		YAML::Node cameras_node;
 
-			YAML::Node cameras_node = yaml_config["ob_cameras"];
-			int i = -1;
-			for (auto const & e : cameras_node) {
-				++i;
+		ob::Context ctx;
+
+		static log_level ob_log_level_to_kerbal(OBLogSeverity level) {
+			switch (level) {
+				case OB_LOG_SEVERITY_DEBUG: {
+					return KDEBUG;
+				}
+				case OB_LOG_SEVERITY_INFO: {
+					return KINFO;
+				}
+				case OB_LOG_SEVERITY_WARN: {
+					return KWARNING;
+				}
+				case OB_LOG_SEVERITY_ERROR: {
+					return KERROR;
+				}
+				case OB_LOG_SEVERITY_FATAL: {
+					return KFATAL;
+				}
+				default: {
+					return KDEBUG;
+				}
+			}
+		}
+
+		find_cameras_context(
+				YAML::Node const &yaml_config) :
+				cameras_node(yaml_config["ob_cameras"]) {
+			ctx.setLoggerSeverity(OB_LOG_SEVERITY_OFF);
+			ctx.setLoggerToCallback(OB_LOG_SEVERITY_INFO, [](OBLogSeverity level, char const *message) {
+				KERBAL_LOG_WRITE(ob_log_level_to_kerbal(level), "{}", message);
+			});
+		}
+
+		void open_local_cameras() {
+			YAML::Node local_cameras_node = cameras_node["local"];
+
+			auto device_list = ctx.queryDeviceList();
+			for (uint32_t device_i = 0; device_i < device_list->deviceCount(); ++device_i) {
+
+				KERBAL_LOG_WRITE(KINFO, "Try opening local camera {}", device_i);
+				auto device = device_list->getDevice(device_i);
+
+				auto device_info = device->getDeviceInfo();
+
+				std::string serial_num = device_info->serialNumber();
+				KERBAL_LOG_WRITE(KINFO, "Serial num of {}-th local camara is {}", device_i, serial_num);
+
+				std::string device_name;
+				try {
+					YAML::Node camera_node = local_cameras_node[serial_num];
+					if (camera_node.IsNull()) {
+						KERBAL_LOG_WRITE(KWARNING,
+										 "device_name is not specified, set default to serial_num. camera serial_num: {}",
+										 serial_num);
+						device_name = serial_num;
+					} else {
+						device_name = camera_node["device_name"].as<std::string>();
+					}
+				} catch (std::exception const &e) {
+					KERBAL_LOG_WRITE(KFATAL, "Parse device_name failed. exception type: {}, what: {}",
+									 typeid(e).name(), e.what());
+					throw;
+				}
+
+				cameras.emplace_back(std::move(device), device_name);
+			}
+		}
+
+		void open_network_cameras() {
+			YAML::Node network_cameras_node = cameras_node["network"];
+			for (auto const &e: network_cameras_node) {
+				uint32_t i = cameras.size();
 				// 打开设备
 				try {
-					auto const & k = e.first;
-					auto const & v = e.second;
+					auto const &k = e.first;
+					auto const &v = e.second;
 
 					std::string device_ip = k.as<std::string>();
 
@@ -68,20 +132,20 @@ class ob_camera_factory : public ucamera_factory {
 						throw;
 					}
 
-					if (device_name_used.find(device_name) != device_name_used.cend()) {
+					auto uir = device_name_used.insert(device_name);
+					if (!uir.insert_happen()) {
 						KERBAL_LOG_WRITE(KFATAL, "device_name: {} has been occupied.", device_name);
 						exit(EXIT_FAILURE);
 					}
-					device_name_used.insert(device_name);
 
 					KERBAL_LOG_WRITE(KINFO,
 									 "Open the {}-th camera with arg: serial_num: {}, device_name: {}", i,
 									 serial_num, device_name);
-					cameras.push_back(std::make_unique<ob_camera>(std::move(device), device_name));
-				} catch (ob::Error const& e) {
+					cameras.emplace_back(std::move(device), device_name);
+				} catch (ob::Error const &e) {
 					KERBAL_LOG_WRITE(KERROR, "Camara {} open failed. exception type: {}, what: {}", i, typeid(e).name(),
 									 e.getMessage());
-				} catch (std::exception const& e) {
+				} catch (std::exception const &e) {
 					KERBAL_LOG_WRITE(KERROR, "Camara {} open failed. exception type: {}, what: {}", i, typeid(e).name(),
 									 e.what());
 				} catch (...) {
@@ -89,11 +153,28 @@ class ob_camera_factory : public ucamera_factory {
 					continue;
 				}
 			}
-			KERBAL_LOG_WRITE(KINFO, "{} cameras have been opened.", cameras.size());
-
-			return cameras;
 		}
 
-};
+	};
+
+
+	class camera_factory {
+
+		public:
+			static
+			kerbal::container::vector<dksave_ob::camera>
+			find_cameras(YAML::Node const &yaml_config) {
+				find_cameras_context ctx(yaml_config);
+				ctx.open_local_cameras();
+				ctx.open_network_cameras();
+				KERBAL_LOG_WRITE(KINFO, "{} cameras have been opened.", ctx.cameras.size());
+				return ctx.cameras;
+			}
+	};
+
+	static_assert(ucamera_factory<camera_factory>,
+				  "ob_camera_factory doesn't meet the requirement of ucamera_factory");
+
+} // namespace dksave_ob
 
 #endif // DKSAVE_OB_CAMERA_FACTORY_HPP
