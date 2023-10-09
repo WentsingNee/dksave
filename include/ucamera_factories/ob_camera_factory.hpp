@@ -95,23 +95,21 @@ namespace dksave_ob {
 				return;
 			}
 
-			for (uint32_t device_i = 0; device_i < device_count; ++device_i) {
-				KERBAL_LOG_WRITE(KINFO, "Try opening local camera. idx: {}", device_i);
-				auto device = device_list->getDevice(device_i);
+			for (uint32_t i = 0; i < device_count; ++i) {
+				KERBAL_LOG_WRITE(KINFO, "Try opening local camera. index: {}", i);
+				auto device = device_list->getDevice(i);
 				auto device_info = device->getDeviceInfo();
 				std::string serial_num = device_info->serialNumber();
-				KERBAL_LOG_WRITE(KINFO, "Serial num of {}-th local camara is {}", device_i, serial_num);
+				KERBAL_LOG_WRITE(KINFO, "Serial number of local camara is fetched. index: {}, serial_num: {}", i, serial_num);
 
 				std::string device_name;
 				try {
 					YAML::Node camera_node = local_cameras_node[serial_num];
-					if (camera_node.IsNull()) {
-						KERBAL_LOG_WRITE(KWARNING,
-										 "device_name is not specified, set default to serial_num. camera serial_num: {}",
-										 serial_num);
-						device_name = serial_num;
-					} else {
+					if (!camera_node.IsNull()) {
 						device_name = camera_node["device_name"].as<std::string>();
+						KERBAL_LOG_WRITE(KINFO,
+										 "device_name of local camera is specified. index: {}, serial_num: {}, device_name: {}",
+										 i, serial_num, device_name);
 					}
 				} catch (std::exception const &e) {
 					KERBAL_LOG_WRITE(KFATAL, "Parse device_name failed. exception type: {}, what: {}",
@@ -119,14 +117,23 @@ namespace dksave_ob {
 					throw;
 				}
 
+				if ("" == device_name) {
+					KERBAL_LOG_WRITE(KWARNING,
+									 "device_name of local camera is not specified, set default to serial_num. index: {}, serial_num: {}",
+									 i, serial_num);
+					device_name = serial_num;
+				}
+
+				KERBAL_LOG_WRITE(KINFO, "Appending camera into cameras list. index: {}, device_name: {}", i, device_name);
 				cameras.emplace_back(std::move(device), device_name);
+				KERBAL_LOG_WRITE(KINFO, "Appending camera into cameras list success. index: {}, device_name: {}", i, device_name);
 			}
 		}
 
 		void open_network_cameras() {
 			YAML::Node network_cameras_node = cameras_node["network"];
+			uint32_t i = 0;
 			for (auto const &e: network_cameras_node) {
-				uint32_t i = cameras.size();
 				// 打开设备
 				try {
 					auto const &k = e.first;
@@ -171,8 +178,8 @@ namespace dksave_ob {
 									 e.what());
 				} catch (...) {
 					KERBAL_LOG_WRITE(KERROR, "Camara {} open failed. what: unknown exception", i);
-					continue;
 				}
+				++i;
 			}
 		}
 

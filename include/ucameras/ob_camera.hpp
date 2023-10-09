@@ -34,8 +34,8 @@ namespace dksave_ob {
 			using super = ucamera_base;
 
 			std::shared_ptr<ob::Device> k_device;
-			std::shared_ptr<ob::Config> config = std::make_shared<ob::Config>();
-			std::shared_ptr<ob::Pipeline> pipeline = std::make_shared<ob::Pipeline>();
+			std::shared_ptr<ob::Config> config;
+			std::shared_ptr<ob::Pipeline> pipeline;
 
 		public:
 			using super::device_name;
@@ -56,6 +56,7 @@ namespace dksave_ob {
 			}
 
 			void enable_color_stream(std::shared_ptr<ob::Config> config) {
+				KERBAL_LOG_WRITE(KINFO, "Enabling camera's color stream. camera: {}", this->device_name());
 				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_COLOR);
 				show_profiles_supported(profile_list);
 				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
@@ -72,6 +73,7 @@ namespace dksave_ob {
 			}
 
 			void enable_depth_stream(std::shared_ptr<ob::Config> config) {
+				KERBAL_LOG_WRITE(KINFO, "Enabling camera's depth stream. camera: {}", this->device_name());
 				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_DEPTH);
 				show_profiles_supported(profile_list);
 				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
@@ -92,7 +94,11 @@ namespace dksave_ob {
 					std::shared_ptr<ob::Device> &&device,
 					std::string const &device_name) :
 					super(device_name),
-					k_device(std::move(device)) {
+					k_device(std::move(device)),
+					config(std::make_shared<ob::Config>()),
+					pipeline(std::make_shared<ob::Pipeline>(this->device()))
+			{
+				KERBAL_LOG_WRITE(KINFO, "Creating camera. camera: {}", this->device_name());
 				this->enable_color_stream(config);
 				this->enable_depth_stream(config);
 				config->setAlignMode(ALIGN_D2C_HW_MODE);

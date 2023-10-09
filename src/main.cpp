@@ -24,6 +24,7 @@
 #include <memory>
 #include <filesystem>
 #include <regex>
+#include <type_traits>
 
 // YAML-CPP
 #include <yaml-cpp/yaml.h>
@@ -189,7 +190,7 @@ int main(int argc, char * argv[]) try
 
 	kerbal::container::vector<std::thread> threads;
 	cameras_collections.for_each([&threads](auto _, auto & cameras) {
-		for (ucamera auto & camera: cameras) {
+		for (auto & camera: cameras) {
 			threads.emplace_back([&camera]() {
 				using camera_t = std::remove_reference_t<decltype(camera)>;
 				typename camera_t::capture_loop_context ctx(&camera, working_dir);
