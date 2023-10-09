@@ -13,6 +13,7 @@
 #ifndef DKSAVE_OB_CAMERA_HPP
 #define DKSAVE_OB_CAMERA_HPP
 
+#include "config/ob_config.hpp"
 #include "logger.hpp"
 #include "save_cv_mat.hpp"
 #include "ucamera.hpp"
@@ -33,17 +34,69 @@ namespace dksave_ob {
 			using super = ucamera_base;
 
 			std::shared_ptr<ob::Device> k_device;
+			std::shared_ptr<ob::Config> config = std::make_shared<ob::Config>();
+			std::shared_ptr<ob::Pipeline> pipeline = std::make_shared<ob::Pipeline>();
 
 		public:
 			using super::device_name;
 			using super::enable;
 			using super::previous_status;
 
+		private:
+			static void show_profiles_supported(std::shared_ptr<ob::StreamProfileList> profile_list) {
+				for (uint32_t i = 0; i < profile_list->count(); ++i) {
+					auto profile = std::const_pointer_cast<ob::StreamProfile>(
+							profile_list->getProfile(i))->as<ob::VideoStreamProfile>();
+					if (profile) {
+						std::cout << fmt::format("{}", *profile) << std::endl;
+					} else {
+						std::cout << fmt::format("nil") << std::endl;
+					}
+				}
+			}
+
+			void enable_color_stream(std::shared_ptr<ob::Config> config) {
+				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_COLOR);
+				show_profiles_supported(profile_list);
+				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
+				try {
+					profile = profile_list->getVideoStreamProfile(1920, 1080, OB_FORMAT_RGB, 30);
+				} catch (ob::Error const &e) {
+					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, what: {}", this->device_name(),
+									 e.getMessage());
+				}
+				if (profile) {
+					config->enableStream(profile);
+					KERBAL_LOG_WRITE(KINFO, "Enable color stream with profile: {}", *profile);
+				}
+			}
+
+			void enable_depth_stream(std::shared_ptr<ob::Config> config) {
+				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_DEPTH);
+				show_profiles_supported(profile_list);
+				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
+				try {
+					profile = profile_list->getVideoStreamProfile(640, 576, OB_FORMAT_Y16, 30);
+				} catch (ob::Error const &e) {
+					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, what: {}", this->device_name(),
+									 e.getMessage());
+				}
+				if (profile) {
+					config->enableStream(profile);
+					KERBAL_LOG_WRITE(KINFO, "Enable depth stream with profile: {}", *profile);
+				}
+			}
+
+		public:
 			camera(
 					std::shared_ptr<ob::Device> &&device,
 					std::string const &device_name) :
 					super(device_name),
 					k_device(std::move(device)) {
+				this->enable_color_stream(config);
+				this->enable_depth_stream(config);
+				config->setAlignMode(ALIGN_D2C_HW_MODE);
+				config->setDepthScaleRequire(true);
 			}
 
 			std::shared_ptr<ob::Device> &device() {
@@ -51,7 +104,7 @@ namespace dksave_ob {
 			}
 
 			void start() {
-
+				pipeline->start(config);
 			}
 
 			void stabilize() {
@@ -59,10 +112,11 @@ namespace dksave_ob {
 			}
 
 			void stop() noexcept {
-
+				pipeline->stop();
 			}
 
 			using capture_loop_context = dksave_ob::capture_loop_context;
+			friend capture_loop_context;
 	};
 
 	static_assert(::ucamera<camera>, "ob_camera doesn't meet the requirement of ucamera");
@@ -77,78 +131,21 @@ namespace dksave_ob {
 			std::filesystem::path path_base_depth = camera_working_dir / "depth";
 			std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
 
-			ob::Pipeline pipeline;
 			std::shared_ptr<ob::FrameSet> frame_set;
 
 		public:
 			int frame_count = 0;
 
-		private:
-			static void show_profiles_supported(std::shared_ptr<ob::StreamProfileList> profile_list) {
-				for (int i = 0; i < profile_list->count(); ++i) {
-					auto profile = std::const_pointer_cast<ob::StreamProfile>(
-							profile_list->getProfile(i))->as<ob::VideoStreamProfile>();
-					std::cout << fmt::format(
-							"{} {} {} {}",
-							profile->width(),
-							profile->height(),
-							int(profile->format()),
-							profile->fps())
-							  << std::endl;
-				}
-			}
-
-			void enable_color_stream(std::shared_ptr<ob::Config> config) {
-				auto profile_list = pipeline.getStreamProfileList(OB_SENSOR_COLOR);
-				show_profiles_supported(profile_list);
-				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
-				try {
-					profile = profile_list->getVideoStreamProfile(1920, 1080, OB_FORMAT_RGB, 30);
-				} catch (ob::Error const &e) {
-					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, what: {}", camera->device_name(),
-									 e.getMessage());
-				}
-				if (profile) {
-					config->enableStream(profile);
-					KERBAL_LOG_WRITE(KINFO, "Enable color stream with profile: {} {} {} {}",
-									 profile->width(), profile->height(),
-									 int(profile->format()), profile->fps());
-				}
-			}
-
-			void enable_depth_stream(std::shared_ptr<ob::Config> config) {
-				auto profile_list = pipeline.getStreamProfileList(OB_SENSOR_DEPTH);
-				show_profiles_supported(profile_list);
-				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
-				try {
-					//根据指定的格式查找对应的Profile,优先查找Y16格式
-					profile = profile_list->getVideoStreamProfile(640, 576, OB_FORMAT_Y16, 30);
-				} catch (ob::Error const &e) {
-					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, what: {}", camera->device_name(),
-									 e.getMessage());
-				}
-				if (profile) {
-					config->enableStream(profile);
-					KERBAL_LOG_WRITE(KINFO, "Enable depth stream with profile: {} {} {} {}",
-									 profile->width(), profile->height(),
-									 int(profile->format()), profile->fps());
-				}
-			}
-
 		public:
 			capture_loop_context(class camera *camera, std::filesystem::path const &working_dir) :
 					camera(camera),
-					camera_working_dir(working_dir / this->camera->device_name()),
-					pipeline(camera->device()) {
-				std::shared_ptr<ob::Config> config = std::make_shared<ob::Config>();
-				this->enable_color_stream(config);
-				this->enable_depth_stream(config);
-				pipeline.start(config);
+					camera_working_dir(working_dir / this->camera->device_name()) {
 			}
 
 			void do_capture() {
-				frame_set = pipeline.waitForFrames(2000);
+				frame_set = camera->pipeline->waitForFrames(2000);
 				if (frame_set == nullptr) {
+					KERBAL_LOG_WRITE(KERROR, "Get capture failed. camera: {}", camera->device_name());
 					throw std::runtime_error("Get capture failed");
 				}
 			}

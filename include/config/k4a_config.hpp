@@ -132,87 +132,52 @@ class fmt::formatter<k4a_device_configuration_t> {
 		static
 		char const *camera_fps_to_str(k4a_device_configuration_t const &config) {
 			switch (config.camera_fps) {
-				case K4A_FRAMES_PER_SECOND_5: {
-					return "5";
-				}
-				case K4A_FRAMES_PER_SECOND_15: {
-					return "15";
-				}
-				case K4A_FRAMES_PER_SECOND_30: {
-					return "30";
-				}
-				default: {
-					return "unknown";
-				}
+				case K4A_FRAMES_PER_SECOND_5: return "5";
+				case K4A_FRAMES_PER_SECOND_15: return "15";
+				case K4A_FRAMES_PER_SECOND_30: return "30";
+				default: return "unknown";
 			}
 		}
 
 		static
 		char const *color_format_to_str(k4a_device_configuration_t const &config) {
 			switch (config.color_format) {
-				case K4A_IMAGE_FORMAT_COLOR_BGRA32: {
-					return "BGRA32";
-				}
-				default: {
-					return "unknown";
-				}
+				case K4A_IMAGE_FORMAT_COLOR_MJPG: return "MJPG";
+				case K4A_IMAGE_FORMAT_COLOR_NV12: return "NV12";
+				case K4A_IMAGE_FORMAT_COLOR_YUY2: return "YUY2";
+				case K4A_IMAGE_FORMAT_DEPTH16: return "DEPTH16";
+				case K4A_IMAGE_FORMAT_IR16: return "IR16";
+				case K4A_IMAGE_FORMAT_CUSTOM8: return "CUSTOM8";
+				case K4A_IMAGE_FORMAT_CUSTOM16: return "CUSTOM16";
+				case K4A_IMAGE_FORMAT_CUSTOM: return "Custom";
+				default: return "unknown";
 			}
 		}
 
 		static
 		char const *color_resolution_to_str(k4a_device_configuration_t const &config) {
 			switch (config.color_resolution) {
-				case K4A_COLOR_RESOLUTION_OFF: {
-					return "OFF";
-				}
-				case K4A_COLOR_RESOLUTION_720P: {
-					return "720P";
-				}
-				case K4A_COLOR_RESOLUTION_1080P: {
-					return "1080P";
-				}
-				case K4A_COLOR_RESOLUTION_1440P: {
-					return "1440P";
-				}
-				case K4A_COLOR_RESOLUTION_1536P: {
-					return "1536P";
-				}
-				case K4A_COLOR_RESOLUTION_2160P: {
-					return "2160P";
-				}
-				case K4A_COLOR_RESOLUTION_3072P: {
-					return "3072P";
-				}
-				default: {
-					return "unknown";
-				}
+				case K4A_COLOR_RESOLUTION_OFF: return "OFF";
+				case K4A_COLOR_RESOLUTION_720P: return "720P";
+				case K4A_COLOR_RESOLUTION_1080P: return "1080P";
+				case K4A_COLOR_RESOLUTION_1440P: return "1440P";
+				case K4A_COLOR_RESOLUTION_1536P: return "1536P";
+				case K4A_COLOR_RESOLUTION_2160P: return "2160P";
+				case K4A_COLOR_RESOLUTION_3072P: return "3072P";
+				default: return "unknown";
 			}
 		}
 
 		static
 		char const *depth_mode_to_str(k4a_device_configuration_t const &config) {
 			switch (config.depth_mode) {
-				case K4A_DEPTH_MODE_OFF: {
-					return "OFF";
-				}
-				case K4A_DEPTH_MODE_NFOV_2X2BINNED: {
-					return "NFOV_2X2BINNED";
-				}
-				case K4A_DEPTH_MODE_NFOV_UNBINNED: {
-					return "NFOV_UNBINNED";
-				}
-				case K4A_DEPTH_MODE_WFOV_2X2BINNED: {
-					return "WFOV_2X2BINNED";
-				}
-				case K4A_DEPTH_MODE_WFOV_UNBINNED: {
-					return "WFOV_UNBINNED";
-				}
-				case K4A_DEPTH_MODE_PASSIVE_IR: {
-					return "PASSIVE_IR";
-				}
-				default: {
-					return "unknown";
-				}
+				case K4A_DEPTH_MODE_OFF: return "OFF";
+				case K4A_DEPTH_MODE_NFOV_2X2BINNED: return "NFOV_2X2BINNED";
+				case K4A_DEPTH_MODE_NFOV_UNBINNED: return "NFOV_UNBINNED";
+				case K4A_DEPTH_MODE_WFOV_2X2BINNED: return "WFOV_2X2BINNED";
+				case K4A_DEPTH_MODE_WFOV_UNBINNED: return "WFOV_UNBINNED";
+				case K4A_DEPTH_MODE_PASSIVE_IR: return "PASSIVE_IR";
+				default: return "unknown";
 			}
 		}
 

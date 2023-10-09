@@ -39,7 +39,7 @@ namespace dksave_k4a {
 				// 找到并打开 Azure Kinect 设备
 				uint32_t device_count = k4a::device::get_installed_count(); // 发现已连接的设备数
 				if (0 == device_count) {
-					KERBAL_LOG_WRITE(KFATAL, "No k4a camera found.");
+					KERBAL_LOG_WRITE(KWARNING, "There is no k4a camera found.");
 					return {};
 				}
 
@@ -101,7 +101,11 @@ namespace dksave_k4a {
 					}
 				}
 
-				KERBAL_LOG_WRITE(KINFO, "{} cameras have been opened.", cameras.size());
+				if (0 == cameras.size()) {
+					KERBAL_LOG_WRITE(KWARNING, "There is no k4a camera opened.");
+				} else {
+					KERBAL_LOG_WRITE(KINFO, "k4a cameras found finished. found: {}", cameras.size());
+				}
 
 				return cameras;
 			}

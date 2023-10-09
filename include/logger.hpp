@@ -12,6 +12,8 @@
 #ifndef KERBAL_LOGGER_HPP
 #define KERBAL_LOGGER_HPP
 
+#include <kerbal/utility/costream.hpp>
+
 #include <iostream>
 #include <mutex>
 
@@ -66,13 +68,13 @@ namespace kerbal
 					return "[DEBUG]";
 				}
 				case log_level::KVERBOSE: {
-					return "[VERBOSE]";
+					return "[VERBO]";
 				}
 				case log_level::KINFO: {
 					return "[INFO]";
 				}
 				case log_level::KWARNING: {
-					return "[WARNING]";
+					return "[WARN]";
 				}
 				case log_level::KERROR: {
 					return "[ERROR]";
@@ -86,6 +88,51 @@ namespace kerbal
 			}
 		}
 
+		inline
+		kerbal::utility::costream::Color_t log_level_color(log_level level) {
+			switch (level) {
+				case log_level::KDEBUG: {
+					return kerbal::utility::costream::LIGHT_PURPLE;
+				}
+				case log_level::KVERBOSE: {
+					return kerbal::utility::costream::LIGHT_BLUE;
+				}
+				case log_level::KINFO: {
+					return kerbal::utility::costream::GREEN;
+				}
+				case log_level::KWARNING: {
+					return kerbal::utility::costream::YELLOW;
+				}
+				case log_level::KERROR: {
+					return kerbal::utility::costream::LIGHT_RED;
+				}
+				case log_level::KFATAL: {
+					return kerbal::utility::costream::RED;
+				}
+				default: {
+					return kerbal::utility::costream::WHITE;
+				}
+			}
+		}
+
+		inline constexpr
+		char const * strip_prefix(char const * s, char const * prefix)
+		{
+			char const * its = s;
+			while (*its != '\0' && *prefix != '\0') {
+				if (*its != *prefix) {
+					return s;
+				}
+				++its;
+				++prefix;
+			}
+			if (*prefix == '\0') {
+				return its;
+			} else {
+				return s;
+			}
+		}
+
 		template <typename Out>
 		void log_write(Out & out, const char * src_file, int line, log_level level, std::string && info)
 		{
@@ -95,13 +142,13 @@ namespace kerbal
 
 			SYSTEMTIME time;
 			GetLocalTime(&time);
-			std::string s = fmt::format("{}  {:9}  {}:{}  {}",
+			std::string s = fmt::format("{}  {:7}  {}:{}  {}",
 										format_systime_to_time(time),
 										kerbal::log::log_level_description(level),
 										src_file, line, std::move(info));
 
 //			auto now = std::chrono::system_clock::now();
-//			std::string s = fmt::format("{}  {:9}  {}:{}  {}",
+//			std::string s = fmt::format("{}  {:7}  {}:{}  {}",
 //										format_time_point_to_time(now),
 //										log_level_description(level),
 //										src_file, line, std::move(info));
@@ -110,7 +157,8 @@ namespace kerbal
 
 			{
 				std::lock_guard<std::mutex> guard(write_mtx);
-				out << s << std::endl;
+				kerbal::utility::costream::costream<std::cout> ccout(log_level_color(level));
+				ccout << s << std::endl;
 			}
 		}
 
@@ -118,9 +166,14 @@ namespace kerbal
 
 } // namespace kerbal
 
-
+#ifdef SOURCE_ROOT
+#define KERBAL_LOG_WRITE(level, ...) do { \
+	kerbal::log::log_write(std::cout, kerbal::log::strip_prefix(__FILE__, SOURCE_ROOT), __LINE__, level, fmt::format(__VA_ARGS__)); \
+} while(0)
+#else
 #define KERBAL_LOG_WRITE(level, ...) do { \
 	kerbal::log::log_write(std::cout, __FILE__, __LINE__, level, fmt::format(__VA_ARGS__)); \
 } while(0)
+#endif
 
 #endif // KERBAL_LOGGER_HPP

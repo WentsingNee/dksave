@@ -11,27 +11,41 @@ k4a_camera_config_template: # 相机配置参数模板
     color_resolution: 1536P
     depth_mode: WFOV_UNBINNED
 
+ob_camera_config_template: # 相机配置参数模板
+  ob_camera_default_config_rgb: &ob_camera_default_config_rgb
+    width: 1920
+    height: 1080
+    format: "OB_FORMAT_RGB"
+    fps: 30
+  ob_camera_default_config_depth: &ob_camera_default_config_depth
+    width: 640
+    height: 576
+    format: "OB_FORMAT_Y16"
+    fps: 30
+
 config:
   working_dir: "D:/dk.test/" # 采集数据的保存路径
   start_time: 08:00:00 # 白天开始采集的时间，格式必须为 hh:mm:ss，下同
   end_time: 18:00:00 # 晚上结束采集的时间，要求 start_time 必须早于 end_time
   sleep_period: 480 # 每帧之间的睡眠周期. 单位：毫秒，此参数控制每帧之间的采集频率。如无限制则填 0。
-                    # 注意应当为每帧循环内其他指令的执行留有一定的时间。比如如果需要每台相机每通道每秒采集 2 帧的话，
-                    # 建议设为 480 毫秒而不是 500 毫秒
-  log_level: "KVERBOSE"
-       # 日志输出等级, 可填的合法参数 (等级由底至高): [
-       #        KDEBUG, ///< DEBUG 等级供调试使用，只在 DEBUG 模式下有效
-       #        KVERBOSE, ///< VERBOSE 等级，用于输出一些繁杂信息
-       #        KINFO, ///< INFO 等级，用于输出一些通知性信息
-       #        KWARNING, ///< WARNING 等级，警告
-       #        KERROR, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
-       #        KFATAL ///< FATAL 等级，表示极为严重的错误，一般遇到 FATAL 时程序已无法再继续运行
-       # ]
+  # 注意应当为每帧循环内其他指令的执行留有一定的时间。比如如果需要每台相机每通道每秒采集 2 帧的话，
+  # 建议设为 480 毫秒而不是 500 毫秒
+  log_level: "KINFO"
+  # 日志输出等级, 可填的合法参数 (等级由底至高): [
+  #        KDEBUG, ///< DEBUG 等级，供调试使用
+  #        KVERBOSE, ///< VERBOSE 等级，用于输出一些繁杂信息
+  #        KINFO, ///< INFO 等级，用于输出一些通知性信息
+  #        KWARNING, ///< WARNING 等级，警告
+  #        KERROR, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
+  #        KFATAL ///< FATAL 等级，表示极为严重的错误，一般遇到 FATAL 时程序已无法再继续运行
+  # ]
+
   k4a_cameras: # 微软 Azure DK 相机。此项下对应每台 DK 相机的配置参数，键名为相机的序列号
     "000642213912":
-      device_name: "camera0" # 相机名称。此参数用于给相机起名字，也决定了此台相机的采集数据保存在 save_dir 路径下的哪个子文件夹中
-                             # 比如 device_name 为 camera0 的相机的采集数据就保存在 working_dir/camera0 下
-                             # 唯一要求是每台相机的 device_name 禁止有重名
+      device_name: "camera0"
+      # 相机名称。此参数用于给相机起名字，也决定了此台相机的采集数据保存在 save_dir 路径下的哪个子文件夹中
+      # 比如 device_name 为 camera0 的相机的采集数据就保存在 working_dir/camera0 下
+      # 唯一要求是每台相机的 device_name 禁止有重名
       config: *k4a_camera_config_0
     "001376414312":
       device_name: "camera1"
@@ -44,12 +58,22 @@ config:
     "local": # 此项下配置本地相机，键名为相机的序列号
       "CL3T53P001A":
         device_name: "camerax"
+        config_rgb: *ob_camera_default_config_rgb
+        config_depth: *ob_camera_default_config_depth
     "network": # 此项下配置网络相机，键名为相机的 IP
-#      "192.168.0.230":
-#        device_name: "camera0"
-#      "192.168.0.231":
-#        device_name: "camera1"
-#      "192.168.0.232":
-#        device_name: "camera2"
-#      "192.168.0.233":
-#        device_name: "camera3"
+      "192.168.0.230":
+        device_name: "camera0"
+        config_rgb: *ob_camera_default_config_rgb
+        config_depth: *ob_camera_default_config_depth
+      "192.168.0.231":
+        device_name: "camera1"
+        config_rgb: *ob_camera_default_config_rgb
+        config_depth: *ob_camera_default_config_depth
+      "192.168.0.232":
+        device_name: "camera2"
+        config_rgb: *ob_camera_default_config_rgb
+        config_depth: *ob_camera_default_config_depth
+      "192.168.0.233":
+        device_name: "camera3"
+        config_rgb: *ob_camera_default_config_rgb
+        config_depth: *ob_camera_default_config_depth

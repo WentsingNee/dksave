@@ -211,7 +211,7 @@ int main(int argc, char * argv[]) try
 							camera.stop();
 						}
 						std::this_thread::sleep_for(1min);
-						return;
+						continue;
 					} else {
 						if (!camera.enable()) {
 							// 启动设备
@@ -222,7 +222,7 @@ int main(int argc, char * argv[]) try
 							} catch (...) {
 								KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_name());
 								std::this_thread::sleep_for(30s);
-								return;
+								continue;
 							}
 							try {
 								camera.stabilize();
@@ -231,7 +231,7 @@ int main(int argc, char * argv[]) try
 								KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.",
 												 camera.device_name());
 								std::this_thread::sleep_for(30s);
-								return;
+								continue;
 							}
 						}
 					}
@@ -281,6 +281,14 @@ int main(int argc, char * argv[]) try
 	}
 
 	KERBAL_LOG_WRITE(KINFO, "Good Bye!");
+
+	KERBAL_LOG_WRITE(KDEBUG, "DEBUG");
+	KERBAL_LOG_WRITE(KVERBOSE, "VERBOSE");
+	KERBAL_LOG_WRITE(KINFO, "INFO");
+	KERBAL_LOG_WRITE(KWARNING, "WARNING");
+	KERBAL_LOG_WRITE(KERROR, "ERROR");
+	KERBAL_LOG_WRITE(KFATAL, "FATAL");
+
 
 	return EXIT_SUCCESS;
 } catch (std::exception const & e) {

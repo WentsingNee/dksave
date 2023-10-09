@@ -12,6 +12,11 @@ add_compile_definitions(NOMINMAX)
 add_executable(dksave src/main.cpp include/ucamera.hpp)
 target_include_directories(dksave PUBLIC include)
 
+string(REPLACE "/" "\\\\" DKSAVE_ROOT "${CMAKE_SOURCE_DIR}")
+string(APPEND DKSAVE_ROOT "\\\\")
+message(STATUS "DKSAVE_ROOT: ${DKSAVE_ROOT}")
+target_compile_definitions(dksave PUBLIC SOURCE_ROOT="${DKSAVE_ROOT}")
+
 
 include(${CMAKE_SOURCE_DIR}/cmake/instruction_extensions.cmake)
 target_wih_ie(dksave avx2)
@@ -45,3 +50,5 @@ target_link_libraries(dksave PUBLIC kerbal::Kerbal)
 target_compile_options(dksave PRIVATE /Zc:__cplusplus)
 add_compile_definitions(KERBAL_ENABLE_MODULES_EXPORT=0)
 
+include(GNUInstallDirs)
+install(TARGETS dksave)

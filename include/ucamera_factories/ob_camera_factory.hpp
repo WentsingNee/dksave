@@ -25,6 +25,7 @@
 
 #include <kerbal/container/avl_set.hpp>
 #include <kerbal/container/vector.hpp>
+#include <regex>
 
 
 namespace dksave_ob {
@@ -64,6 +65,21 @@ namespace dksave_ob {
 				cameras_node(yaml_config["ob_cameras"]) {
 			ctx.setLoggerSeverity(OB_LOG_SEVERITY_OFF);
 			ctx.setLoggerToCallback(OB_LOG_SEVERITY_INFO, [](OBLogSeverity level, char const *message) {
+				try {
+					static std::regex const OB_LOG_PATTERN(R"(\[.*\]\[.*\]\[.*\]\[(.*):(\d+)\] (.*))");
+					std::cmatch match;
+					if (std::regex_search(message, match, OB_LOG_PATTERN)) {
+						std::string file(match[1].first, match[1].second);
+						std::string lines(match[2].first, match[2].second);
+						int line = std::stoi(lines);
+						std::string msg(match[3].first, match[3].second);
+						kerbal::log::log_write(std::cout, file.c_str(), line, ob_log_level_to_kerbal(level),
+											   fmt::format("{}", msg));
+						return;
+					}
+				} catch (...) {
+					// pass
+				}
 				KERBAL_LOG_WRITE(ob_log_level_to_kerbal(level), "{}", message);
 			});
 		}
@@ -72,13 +88,17 @@ namespace dksave_ob {
 			YAML::Node local_cameras_node = cameras_node["local"];
 
 			auto device_list = ctx.queryDeviceList();
-			for (uint32_t device_i = 0; device_i < device_list->deviceCount(); ++device_i) {
 
-				KERBAL_LOG_WRITE(KINFO, "Try opening local camera {}", device_i);
+			uint32_t device_count = device_list->deviceCount(); // 发现已连接的设备数
+			if (0 == device_count) {
+				KERBAL_LOG_WRITE(KWARNING, "There is no local OB camera found.");
+				return;
+			}
+
+			for (uint32_t device_i = 0; device_i < device_count; ++device_i) {
+				KERBAL_LOG_WRITE(KINFO, "Try opening local camera. idx: {}", device_i);
 				auto device = device_list->getDevice(device_i);
-
 				auto device_info = device->getDeviceInfo();
-
 				std::string serial_num = device_info->serialNumber();
 				KERBAL_LOG_WRITE(KINFO, "Serial num of {}-th local camara is {}", device_i, serial_num);
 
@@ -113,10 +133,11 @@ namespace dksave_ob {
 					auto const &v = e.second;
 
 					std::string device_ip = k.as<std::string>();
+					int port = 8090;
 
-					KERBAL_LOG_WRITE(KINFO, "Try opening net camera {}", device_ip);
-					auto device = ctx.createNetDevice(device_ip.c_str(), 8090);
-					KERBAL_LOG_WRITE(KINFO, "Net camera {} open success", device_ip);
+					KERBAL_LOG_WRITE(KINFO, "Try creating net camera. device ip: {}, port: {}", device_ip, port);
+					auto device = ctx.createNetDevice(device_ip.c_str(), port);
+					KERBAL_LOG_WRITE(KINFO, "Net camera created success. device id: {}, port: {}", device_ip, port);
 
 					auto device_info = device->getDeviceInfo();
 
@@ -134,7 +155,7 @@ namespace dksave_ob {
 
 					auto uir = device_name_used.insert(device_name);
 					if (!uir.insert_happen()) {
-						KERBAL_LOG_WRITE(KFATAL, "device_name: {} has been occupied.", device_name);
+						KERBAL_LOG_WRITE(KFATAL, "Specified device_name has been occupied. device_name: {}", device_name);
 						exit(EXIT_FAILURE);
 					}
 
@@ -167,7 +188,13 @@ namespace dksave_ob {
 				find_cameras_context ctx(yaml_config);
 				ctx.open_local_cameras();
 				ctx.open_network_cameras();
-				KERBAL_LOG_WRITE(KINFO, "{} cameras have been opened.", ctx.cameras.size());
+
+				if (0 == ctx.cameras.size()) {
+					KERBAL_LOG_WRITE(KWARNING, "There is no OB camera opened.");
+				} else {
+					KERBAL_LOG_WRITE(KINFO, "OB cameras found finished. found: {}", ctx.cameras.size());
+				}
+
 				return ctx.cameras;
 			}
 	};
