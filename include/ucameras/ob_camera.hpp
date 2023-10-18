@@ -2,10 +2,9 @@
  * @file       ob_camera.hpp
  * @brief
  * @date       2023-09-24
- * @author     Peter
+ * @author     Wentsing Nee
  * @copyright
- *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
- *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *      Wentsing Nee of China Agricultural University
  *   all rights reserved
  */
 
@@ -14,6 +13,7 @@
 #define DKSAVE_OB_CAMERA_HPP
 
 #include "config/ob_config.hpp"
+#include "context/ob_context/H264_to_cv_mat_context.hpp"
 #include "logger.hpp"
 #include "save_cv_mat.hpp"
 #include "ucamera.hpp"
@@ -55,16 +55,16 @@ namespace dksave_ob {
 				}
 			}
 
-			void enable_color_stream(std::shared_ptr<ob::Config> config) {
-				KERBAL_LOG_WRITE(KINFO, "Enabling camera's color stream. camera: {}", this->device_name());
+			void enable_color_stream(std::shared_ptr<ob::Config> config, dksave_ob::ob_camera_configuration const &dksave_config) {
+				KERBAL_LOG_WRITE(KINFO, "Enabling camera's color stream. camera: {}, config: {}", this->device_name(), dksave_config);
 				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_COLOR);
 				show_profiles_supported(profile_list);
 				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
 				try {
-					profile = profile_list->getVideoStreamProfile(1920, 1080, OB_FORMAT_RGB, 30);
+					profile = profile_list->getVideoStreamProfile(dksave_config.width, dksave_config.height, dksave_config.format, dksave_config.fps);
 				} catch (ob::Error const &e) {
-					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, what: {}", this->device_name(),
-									 e.getMessage());
+					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, config: {}, what: {}",
+									 this->device_name(), dksave_config, e.getMessage());
 				}
 				if (profile) {
 					config->enableStream(profile);
@@ -72,16 +72,16 @@ namespace dksave_ob {
 				}
 			}
 
-			void enable_depth_stream(std::shared_ptr<ob::Config> config) {
-				KERBAL_LOG_WRITE(KINFO, "Enabling camera's depth stream. camera: {}", this->device_name());
+			void enable_depth_stream(std::shared_ptr<ob::Config> config, dksave_ob::ob_camera_configuration const &dksave_config) {
+				KERBAL_LOG_WRITE(KINFO, "Enabling camera's depth stream. camera: {}, config: {}", this->device_name(), dksave_config);
 				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_DEPTH);
 				show_profiles_supported(profile_list);
 				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
 				try {
-					profile = profile_list->getVideoStreamProfile(640, 576, OB_FORMAT_Y16, 30);
+					profile = profile_list->getVideoStreamProfile(dksave_config.width, dksave_config.height, dksave_config.format, dksave_config.fps);
 				} catch (ob::Error const &e) {
-					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, what: {}", this->device_name(),
-									 e.getMessage());
+					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, config: {}, what: {}",
+									 this->device_name(), dksave_config,  e.getMessage());
 				}
 				if (profile) {
 					config->enableStream(profile);
@@ -92,15 +92,18 @@ namespace dksave_ob {
 		public:
 			camera(
 					std::shared_ptr<ob::Device> &&device,
-					std::string const &device_name) :
+					std::string const &device_name,
+					dksave_ob::ob_camera_configuration const &config_rgb,
+					dksave_ob::ob_camera_configuration const &config_depth
+			) :
 					super(device_name),
 					k_device(std::move(device)),
 					config(std::make_shared<ob::Config>()),
 					pipeline(std::make_shared<ob::Pipeline>(this->device()))
 			{
 				KERBAL_LOG_WRITE(KINFO, "Creating camera. camera: {}", this->device_name());
-				this->enable_color_stream(config);
-				this->enable_depth_stream(config);
+				this->enable_color_stream(config, config_rgb);
+				this->enable_depth_stream(config, config_depth);
 				config->setAlignMode(ALIGN_D2C_HW_MODE);
 				config->setDepthScaleRequire(true);
 			}
@@ -111,14 +114,18 @@ namespace dksave_ob {
 
 			void start() {
 				pipeline->start(config);
+				this->k_enable = true;
 			}
 
 			void stabilize() {
 
 			}
 
-			void stop() noexcept {
+			void stop() noexcept try {
 				pipeline->stop();
+				this->k_enable = false;
+			} catch(...) {
+				this->k_enable = false;
 			}
 
 			using capture_loop_context = dksave_ob::capture_loop_context;
@@ -138,6 +145,17 @@ namespace dksave_ob {
 			std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
 
 			std::shared_ptr<ob::FrameSet> frame_set;
+			struct RGB_frame_to_cv_mat_context
+			{
+				cv::Mat cv_mat;
+
+				cv::Mat const & cast(std::shared_ptr<ob::ColorFrame> color_frame)
+				{
+					this->cv_mat = cv::Mat(color_frame->height(), color_frame->width(), CV_8UC3, color_frame->data());
+					return this->cv_mat;
+				}
+			} rgb_context;
+			H264_to_cv_mat_context h264_context;
 
 		public:
 			int frame_count = 0;
@@ -156,14 +174,6 @@ namespace dksave_ob {
 				}
 			}
 
-		private:
-			static inline std::vector<int> const compression_params = {
-					cv::IMWRITE_PNG_COMPRESSION,
-					0,
-					cv::IMWRITE_PNG_STRATEGY,
-					cv::IMWRITE_PNG_STRATEGY_DEFAULT
-			};
-
 		public:
 			void handle_color(std::string const &date, std::string const &timestamp) {
 				if (!frame_set) {
@@ -174,11 +184,35 @@ namespace dksave_ob {
 					KERBAL_LOG_WRITE(KERROR, "Get color frame failed. camera: {}", camera->device_name());
 					return;
 				}
+				KERBAL_LOG_WRITE(KDEBUG, "Get color frame success. camera: {}, format: {}",
+								 camera->device_name(),
+								 color_frame->format());
 
-				cv::Mat color_mat(color_frame->height(), color_frame->width(), CV_8UC3, color_frame->data());
+				cv::Mat const * color_mat = nullptr;
+				switch (color_frame->format()) {
+					case OB_FORMAT_H264: {
+//						KERBAL_LOG_WRITE(KDEBUG, "XXXX. DATA SIZE: {}",
+//										 color_frame->dataSize());
+						color_mat = &h264_context.decode(reinterpret_cast<std::uint8_t*>(color_frame->data()), color_frame->dataSize());
+						KERBAL_LOG_WRITE(KDEBUG, "Decode color frame from H.264 success. camera: {}",
+										 camera->device_name());
+						break;
+					}
+					case OB_FORMAT_RGB: {
+						color_mat = &rgb_context.cast(color_frame);
+						KERBAL_LOG_WRITE(KDEBUG, "Convert ob::Frame to cv::Mat success. camera: {}",
+										 camera->device_name());
+						break;
+					}
+				}
+				if (nullptr == color_mat) {
+					KERBAL_LOG_WRITE(KDEBUG, "color_mat is null. camera: {}",
+									 camera->device_name());
+					return;
+				}
 				std::filesystem::path filename_rgb = path_base_color / date / (timestamp + ".png");
 				try {
-					save_cv_mat(color_mat, filename_rgb);
+					save_cv_mat(*color_mat, filename_rgb);
 				} catch (...) {
 					KERBAL_LOG_WRITE(KERROR, "Color image saved failed. camera: {}, filename_rgb: {}",
 									 camera->device_name(),
@@ -195,6 +229,9 @@ namespace dksave_ob {
 					KERBAL_LOG_WRITE(KERROR, "Get depth frame failed. camera: {}", camera->device_name());
 					return;
 				}
+				KERBAL_LOG_WRITE(KDEBUG, "Get depth frame success. camera: {}, format: {}",
+								 camera->device_name(),
+								 depth_frame->format());
 
 				cv::Mat depth_mat(depth_frame->height(), depth_frame->width(), CV_16UC1, depth_frame->data());
 				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");

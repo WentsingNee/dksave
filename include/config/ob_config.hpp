@@ -2,10 +2,9 @@
  * @file       ob_config.hpp
  * @brief
  * @date       2023/10/9
- * @author     Peter
+ * @author     Wentsing Nee
  * @copyright
- *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
- *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *      Wentsing Nee of China Agricultural University
  *   all rights reserved
  */
 
@@ -16,42 +15,54 @@
 #include <cstring>
 
 #include <fmt/format.h>
-
 #include <libobsensor/ObSensor.hpp>
 
 
-OBFormat str_to_OB_FORMAT(char const * s)
-{
-	if (strcmp(s, "OB_FORMAT_YUYV") == 0)  return OB_FORMAT_YUYV;
-	if (strcmp(s, "OB_FORMAT_YUY2") == 0)  return OB_FORMAT_YUY2;
-	if (strcmp(s, "OB_FORMAT_UYVY") == 0)  return OB_FORMAT_UYVY;
-	if (strcmp(s, "OB_FORMAT_NV12") == 0)  return OB_FORMAT_NV12;
-	if (strcmp(s, "OB_FORMAT_NV21") == 0)  return OB_FORMAT_NV21;
-	if (strcmp(s, "OB_FORMAT_MJPG") == 0)  return OB_FORMAT_MJPG;
-	if (strcmp(s, "OB_FORMAT_H264") == 0)  return OB_FORMAT_H264;
-	if (strcmp(s, "OB_FORMAT_H265") == 0)  return OB_FORMAT_H265;
-	if (strcmp(s, "OB_FORMAT_Y16") == 0)  return OB_FORMAT_Y16;
-	if (strcmp(s, "OB_FORMAT_Y8") == 0)  return OB_FORMAT_Y8;
-	if (strcmp(s, "OB_FORMAT_Y10") == 0)  return OB_FORMAT_Y10;
-	if (strcmp(s, "OB_FORMAT_Y11") == 0)  return OB_FORMAT_Y11;
-	if (strcmp(s, "OB_FORMAT_Y12") == 0)  return OB_FORMAT_Y12;
-	if (strcmp(s, "OB_FORMAT_GRAY") == 0)  return OB_FORMAT_GRAY;
-	if (strcmp(s, "OB_FORMAT_HEVC") == 0)  return OB_FORMAT_HEVC;
-	if (strcmp(s, "OB_FORMAT_I420") == 0)  return OB_FORMAT_I420;
-	if (strcmp(s, "OB_FORMAT_ACCEL") == 0)  return OB_FORMAT_ACCEL;
-	if (strcmp(s, "OB_FORMAT_GYRO") == 0)  return OB_FORMAT_GYRO;
-	if (strcmp(s, "OB_FORMAT_POINT") == 0)  return OB_FORMAT_POINT;
-	if (strcmp(s, "OB_FORMAT_RGB_POINT") == 0)  return OB_FORMAT_RGB_POINT;
-	if (strcmp(s, "OB_FORMAT_RLE") == 0)  return OB_FORMAT_RLE;
-	if (strcmp(s, "OB_FORMAT_RGB") == 0)  return OB_FORMAT_RGB;
-	if (strcmp(s, "OB_FORMAT_BGR") == 0)  return OB_FORMAT_BGR;
-	if (strcmp(s, "OB_FORMAT_Y14") == 0)  return OB_FORMAT_Y14;
-	if (strcmp(s, "OB_FORMAT_BGRA") == 0)  return OB_FORMAT_BGRA;
-	if (strcmp(s, "OB_FORMAT_COMPRESSED") == 0)  return OB_FORMAT_COMPRESSED;
-	if (strcmp(s, "OB_FORMAT_RVL") == 0)  return OB_FORMAT_RVL;
-	if (strcmp(s, "OB_FORMAT_UNKNOWN") == 0)  return OB_FORMAT_UNKNOWN;
-	throw std::runtime_error("unknown OB_FORMAT");
-}
+namespace dksave_ob {
+
+	OBFormat str_to_OB_FORMAT(char const * s)
+	{
+		if (strcmp(s, "OB_FORMAT_YUYV") == 0)  return OB_FORMAT_YUYV;
+		if (strcmp(s, "OB_FORMAT_YUY2") == 0)  return OB_FORMAT_YUY2;
+		if (strcmp(s, "OB_FORMAT_UYVY") == 0)  return OB_FORMAT_UYVY;
+		if (strcmp(s, "OB_FORMAT_NV12") == 0)  return OB_FORMAT_NV12;
+		if (strcmp(s, "OB_FORMAT_NV21") == 0)  return OB_FORMAT_NV21;
+		if (strcmp(s, "OB_FORMAT_MJPG") == 0)  return OB_FORMAT_MJPG;
+		if (strcmp(s, "OB_FORMAT_H264") == 0)  return OB_FORMAT_H264;
+		if (strcmp(s, "OB_FORMAT_H265") == 0)  return OB_FORMAT_H265;
+		if (strcmp(s, "OB_FORMAT_Y16") == 0)  return OB_FORMAT_Y16;
+		if (strcmp(s, "OB_FORMAT_Y8") == 0)  return OB_FORMAT_Y8;
+		if (strcmp(s, "OB_FORMAT_Y10") == 0)  return OB_FORMAT_Y10;
+		if (strcmp(s, "OB_FORMAT_Y11") == 0)  return OB_FORMAT_Y11;
+		if (strcmp(s, "OB_FORMAT_Y12") == 0)  return OB_FORMAT_Y12;
+		if (strcmp(s, "OB_FORMAT_GRAY") == 0)  return OB_FORMAT_GRAY;
+		if (strcmp(s, "OB_FORMAT_HEVC") == 0)  return OB_FORMAT_HEVC;
+		if (strcmp(s, "OB_FORMAT_I420") == 0)  return OB_FORMAT_I420;
+		if (strcmp(s, "OB_FORMAT_ACCEL") == 0)  return OB_FORMAT_ACCEL;
+		if (strcmp(s, "OB_FORMAT_GYRO") == 0)  return OB_FORMAT_GYRO;
+		if (strcmp(s, "OB_FORMAT_POINT") == 0)  return OB_FORMAT_POINT;
+		if (strcmp(s, "OB_FORMAT_RGB_POINT") == 0)  return OB_FORMAT_RGB_POINT;
+		if (strcmp(s, "OB_FORMAT_RLE") == 0)  return OB_FORMAT_RLE;
+		if (strcmp(s, "OB_FORMAT_RGB") == 0)  return OB_FORMAT_RGB;
+		if (strcmp(s, "OB_FORMAT_BGR") == 0)  return OB_FORMAT_BGR;
+		if (strcmp(s, "OB_FORMAT_Y14") == 0)  return OB_FORMAT_Y14;
+		if (strcmp(s, "OB_FORMAT_BGRA") == 0)  return OB_FORMAT_BGRA;
+		if (strcmp(s, "OB_FORMAT_COMPRESSED") == 0)  return OB_FORMAT_COMPRESSED;
+		if (strcmp(s, "OB_FORMAT_RVL") == 0)  return OB_FORMAT_RVL;
+		if (strcmp(s, "OB_FORMAT_UNKNOWN") == 0)  return OB_FORMAT_UNKNOWN;
+		throw std::runtime_error("unknown OB_FORMAT");
+	}
+
+
+	struct ob_camera_configuration {
+		int width;
+		int height;
+		OBFormat format;
+		int fps;
+	};
+
+
+} // namespace dksave_ob
 
 template<>
 struct fmt::formatter<OBFormat> {
@@ -107,13 +118,33 @@ struct fmt::formatter<OBFormat> {
 
 
 template<>
+struct fmt::formatter<dksave_ob::ob_camera_configuration> {
+
+	auto
+	format(dksave_ob::ob_camera_configuration const & config, format_context &ctx) const -> format_context::iterator {
+		fmt::format_to(
+				ctx.out(),
+				"{{width: {:5}, height: {:5}, format: {}, fps: {}}}",
+				config.width, config.height,
+				config.format, config.fps
+		);
+		return ctx.out();
+	}
+
+	constexpr auto parse(format_parse_context &ctx) -> format_parse_context::iterator {
+		return ctx.begin();
+	}
+
+};
+
+template<>
 struct fmt::formatter<ob::VideoStreamProfile> {
 
 	auto
 	format(ob::VideoStreamProfile const & profile, format_context &ctx) const -> format_context::iterator {
 		fmt::format_to(
 				ctx.out(),
-				"width: {:5}, height: {:5}, format: {}, fps: {}",
+				"{{width: {:5}, height: {:5}, format: {}, fps: {}}}",
 				profile.width(), profile.height(),
 				profile.format(), profile.fps()
 		);

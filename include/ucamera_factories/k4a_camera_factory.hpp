@@ -2,10 +2,9 @@
  * @file       k4a_camera_factory.hpp
  * @brief
  * @date       2023-09-24
- * @author     Peter
+ * @author     Wentsing Nee
  * @copyright
- *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
- *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *      Wentsing Nee of China Agricultural University
  *   all rights reserved
  */
 
@@ -22,7 +21,7 @@
 #include <cstdlib>
 
 #include <k4a/k4a.hpp>
-#include <yaml-cpp/node/node.h>
+#include <yaml-cpp/yaml.h>
 
 #include <kerbal/container/avl_set.hpp>
 #include <kerbal/container/vector.hpp>
@@ -31,6 +30,32 @@
 namespace dksave_k4a {
 
 	class camera_factory {
+
+		private:
+			static k4a_device_configuration_t parse_yaml_to_config(YAML::Node const &config_yaml)
+			{
+				k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
+
+				auto parse_field = [](YAML::Node const &config_yaml, k4a_device_configuration_t &config_k4a, const char * field_name, auto field, auto deserializer) {
+					std::string s;
+					try {
+						s = config_yaml[field_name].as<std::string>();
+					} catch (YAML::InvalidNode const &e) {
+						KERBAL_LOG_WRITE(KERROR, "Invalid node. key: {}, what: {}", field_name, e.what());
+						throw;
+					}
+					config_k4a.*field = deserializer(s.c_str());
+				};
+
+				parse_field(config_yaml, config, "camera_fps", &k4a_device_configuration_t::camera_fps, str_to_camera_fps);
+				parse_field(config_yaml, config, "color_format", &k4a_device_configuration_t::color_format, str_to_color_format);
+				parse_field(config_yaml, config, "color_resolution", &k4a_device_configuration_t::color_resolution, str_to_color_resolution);
+				parse_field(config_yaml, config, "depth_mode", &k4a_device_configuration_t::depth_mode, str_to_depth_mode);
+
+				config.synchronized_images_only = true; // ensures that depth and color images are both available in the capture
+
+				return config;
+			}
 
 		public:
 			static
@@ -70,7 +95,7 @@ namespace dksave_k4a {
 							continue;
 						}
 
-						k4a_device_configuration_t config = yaml_to_k4a_config(camera_k4a_config_node);
+						k4a_device_configuration_t config = parse_yaml_to_config(camera_k4a_config_node);
 						std::string device_name;
 						try {
 							device_name = camera_node["device_name"].as<std::string>();

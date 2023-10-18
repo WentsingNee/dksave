@@ -2,125 +2,94 @@
  * @file       k4a_config.hpp
  * @brief
  * @date       2023-08-26
- * @author     Peter
+ * @author     Wentsing Nee
  * @copyright
- *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
- *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *      Wentsing Nee of China Agricultural University
  *   all rights reserved
  */
 
 #ifndef DKSAVE_K4A_CONFIG_HPP
 #define DKSAVE_K4A_CONFIG_HPP
 
-#include <k4a/k4a.hpp>
+#include <stdexcept>
+
+#include <cstring>
 
 #include <fmt/format.h>
-#include <yaml-cpp/yaml.h>
-
-#include "logger.hpp"
+#include <k4a/k4a.hpp>
 
 
 namespace dksave_k4a {
 
-	inline void parse_camera_fps(YAML::Node const &config_yaml, k4a_device_configuration_t &config_k4a) {
-		std::string camera_fps;
-		try {
-			camera_fps = config_yaml["camera_fps"].as<std::string>();
-		} catch (YAML::InvalidNode const &e) {
-			KERBAL_LOG_WRITE(KFATAL, "Parse camera_fps error. what: {}", e.what());
-			throw;
+	inline k4a_fps_t str_to_camera_fps(char const * s)
+	{
+		if (strcmp(s, "5") == 0) {
+			return K4A_FRAMES_PER_SECOND_5;
 		}
-		if (camera_fps == "5") {
-			config_k4a.camera_fps = K4A_FRAMES_PER_SECOND_5;
-		} else if (camera_fps == "15") {
-			config_k4a.camera_fps = K4A_FRAMES_PER_SECOND_15;
-		} else if (camera_fps == "30") {
-			config_k4a.camera_fps = K4A_FRAMES_PER_SECOND_30;
-		} else {
-			throw std::runtime_error(fmt::format("Unknown camera_fps. Got: \"{}\"", camera_fps));
+		if (strcmp(s, "15") == 0) {
+			return K4A_FRAMES_PER_SECOND_15;
 		}
+		if (strcmp(s, "30") == 0) {
+			return K4A_FRAMES_PER_SECOND_30;
+		}
+		throw std::runtime_error(fmt::format("Unknown camera_fps. Got: \"{}\"", s));
 	}
 
-	inline void parse_color_format(YAML::Node const &config_yaml, k4a_device_configuration_t &config_k4a) {
-		std::string color_format;
-		try {
-			color_format = config_yaml["color_format"].as<std::string>();
-		} catch (YAML::InvalidNode const &e) {
-			KERBAL_LOG_WRITE(KFATAL, "Parse camera_fps error. what: {}", e.what());
-			throw;
+	inline k4a_image_format_t str_to_color_format(char const * s)
+	{
+		if (strcmp(s, "BGRA32") == 0) {
+			return K4A_IMAGE_FORMAT_COLOR_BGRA32;
 		}
-		if (color_format == "BGRA32") {
-			config_k4a.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-		} else {
-			throw std::runtime_error(fmt::format("Unknown color_format. Got: \"{}\"", color_format));
-		}
+		throw std::runtime_error(fmt::format("Unknown color_format. Got: \"{}\"", s));
 	}
 
-	inline void parse_color_resolution(YAML::Node const &config_yaml, k4a_device_configuration_t &config_k4a) {
-		std::string color_resolution;
-		try {
-			color_resolution = config_yaml["color_resolution"].as<std::string>();
-		} catch (YAML::InvalidNode const &e) {
-			KERBAL_LOG_WRITE(KFATAL, "Parse camera_fps error. what: {}", e.what());
-			throw;
+	inline k4a_color_resolution_t str_to_color_resolution(char const * s)
+	{
+		if (strcmp(s, "OFF") == 0) {
+			return K4A_COLOR_RESOLUTION_OFF;
 		}
-		if (color_resolution == "OFF") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_OFF;
-		} else if (color_resolution == "720P") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_720P;
-		} else if (color_resolution == "1080P") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_1080P;
-		} else if (color_resolution == "1440P") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_1440P;
-		} else if (color_resolution == "1536P") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_1536P;
-		} else if (color_resolution == "2160P") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_2160P;
-		} else if (color_resolution == "3072P") {
-			config_k4a.color_resolution = K4A_COLOR_RESOLUTION_3072P;
-		} else {
-			throw std::runtime_error(fmt::format("Unknown color_resolution. Got: \"{}\"", color_resolution));
+		if (strcmp(s, "720P") == 0) {
+			return K4A_COLOR_RESOLUTION_720P;
 		}
+		if (strcmp(s, "1080P") == 0) {
+			return K4A_COLOR_RESOLUTION_1080P;
+		}
+		if (strcmp(s, "1440P") == 0) {
+			return K4A_COLOR_RESOLUTION_1440P;
+		}
+		if (strcmp(s, "1536P") == 0) {
+			return K4A_COLOR_RESOLUTION_1536P;
+		}
+		if (strcmp(s, "2160P") == 0) {
+			return K4A_COLOR_RESOLUTION_2160P;
+		}
+		if (strcmp(s, "3072P") == 0) {
+			return K4A_COLOR_RESOLUTION_3072P;
+		}
+		throw std::runtime_error(fmt::format("Unknown color_resolution. Got: \"{}\"", s));
 	}
 
-
-	inline void parse_depth_mode(YAML::Node const &config_yaml, k4a_device_configuration_t &config_k4a) {
-		std::string depth_mode;
-		try {
-			depth_mode = config_yaml["depth_mode"].as<std::string>();
-		} catch (YAML::InvalidNode const &e) {
-			KERBAL_LOG_WRITE(KFATAL, "Parse camera_fps error. what: {}", e.what());
-			throw;
+	inline k4a_depth_mode_t str_to_depth_mode(char const * s)
+	{
+		if (strcmp(s, "OFF") == 0) {
+			return K4A_DEPTH_MODE_OFF;
 		}
-		if (depth_mode == "OFF") {
-			config_k4a.depth_mode = K4A_DEPTH_MODE_OFF;
-		} else if (depth_mode == "NFOV_2X2BINNED") {
-			config_k4a.depth_mode = K4A_DEPTH_MODE_NFOV_2X2BINNED;
-		} else if (depth_mode == "NFOV_UNBINNED") {
-			config_k4a.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-		} else if (depth_mode == "WFOV_2X2BINNED") {
-			config_k4a.depth_mode = K4A_DEPTH_MODE_WFOV_2X2BINNED;
-		} else if (depth_mode == "WFOV_UNBINNED") {
-			config_k4a.depth_mode = K4A_DEPTH_MODE_WFOV_UNBINNED;
-		} else if (depth_mode == "PASSIVE_IR") {
-			config_k4a.depth_mode = K4A_DEPTH_MODE_PASSIVE_IR;
-		} else {
-			throw std::runtime_error(fmt::format("Unknown depth_mode. Got: \"{}\"", depth_mode));
+		if (strcmp(s, "NFOV_2X2BINNED") == 0) {
+			return K4A_DEPTH_MODE_NFOV_2X2BINNED;
 		}
-	}
-
-
-	inline k4a_device_configuration_t yaml_to_k4a_config(YAML::Node const &config_yaml) {
-		k4a_device_configuration_t config_k4a = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-
-		parse_camera_fps(config_yaml, config_k4a);
-		parse_color_format(config_yaml, config_k4a);
-		parse_color_resolution(config_yaml, config_k4a);
-		parse_depth_mode(config_yaml, config_k4a);
-
-		config_k4a.synchronized_images_only = true; // ensures that depth and color images are both available in the capture
-
-		return config_k4a;
+		if (strcmp(s, "NFOV_UNBINNED") == 0) {
+			return K4A_DEPTH_MODE_NFOV_UNBINNED;
+		}
+		if (strcmp(s, "WFOV_2X2BINNED") == 0) {
+			return K4A_DEPTH_MODE_WFOV_2X2BINNED;
+		}
+		if (strcmp(s, "WFOV_UNBINNED") == 0) {
+			return K4A_DEPTH_MODE_WFOV_UNBINNED;
+		}
+		if (strcmp(s, "PASSIVE_IR") == 0) {
+			return K4A_DEPTH_MODE_PASSIVE_IR;
+		}
+		throw std::runtime_error(fmt::format("Unknown depth_mode. Got: \"{}\"", s));
 	}
 
 } // namespace dksave_k4a

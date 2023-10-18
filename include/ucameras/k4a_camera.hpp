@@ -2,10 +2,9 @@
  * @file       k4a_camera.hpp
  * @brief
  * @date       2022-10-07
- * @author     Peter
+ * @author     Wentsing Nee
  * @copyright
- *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
- *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *      Wentsing Nee of China Agricultural University
  *   all rights reserved
  */
 
@@ -105,7 +104,7 @@ namespace dksave_k4a {
 						KERBAL_LOG_WRITE(KWARNING, "K4A_WAIT_RESULT_TIMEOUT for {} times.", failed);
 
 						if (failed >= 30) {
-							KERBAL_LOG_WRITE(KFATAL, "Failed to give auto-exposure.", failed);
+							KERBAL_LOG_WRITE(KERROR, "Failed to give auto-exposure.", failed);
 							this->stop();
 							return;
 						}

@@ -1,4 +1,4 @@
-k4a_camera_config_template: # 相机配置参数模板
+k4a_camera_config_template: # K4A 相机配置参数模板
   k4a_camera_config_0: &k4a_camera_config_0 # 饲喂栏上方相机配置参数
     camera_fps: 30 # 快门 fps，可以填的值有：[5, 15, 30]
     color_format: BGRA32 # 色彩格式，目前只支持填 BGRA32
@@ -11,17 +11,22 @@ k4a_camera_config_template: # 相机配置参数模板
     color_resolution: 1536P
     depth_mode: WFOV_UNBINNED
 
-ob_camera_config_template: # 相机配置参数模板
-  ob_camera_default_config_rgb: &ob_camera_default_config_rgb
-    width: 1920
-    height: 1080
+ob_camera_config_template: # OB 相机配置参数模板
+  ob_camera_default_config_local_rgb: &ob_camera_default_config_local_rgb
+    width: 3840
+    height: 2160
     format: "OB_FORMAT_RGB"
-    fps: 30
+    fps: 25
+  ob_camera_default_config_network_rgb: &ob_camera_default_config_network_rgb
+    width: 3840
+    height: 2160
+    format: "OB_FORMAT_H264"
+    fps: 25
   ob_camera_default_config_depth: &ob_camera_default_config_depth
     width: 640
     height: 576
     format: "OB_FORMAT_Y16"
-    fps: 30
+    fps: 25
 
 config:
   working_dir: "D:/dk.test/" # 采集数据的保存路径
@@ -58,22 +63,22 @@ config:
     "local": # 此项下配置本地相机，键名为相机的序列号
       "CL3T53P001A":
         device_name: "camerax"
-        config_rgb: *ob_camera_default_config_rgb
+        config_rgb: *ob_camera_default_config_network_rgb
         config_depth: *ob_camera_default_config_depth
     "network": # 此项下配置网络相机，键名为相机的 IP
       "192.168.0.230":
         device_name: "camera0"
-        config_rgb: *ob_camera_default_config_rgb
+        config_rgb: *ob_camera_default_config_network_rgb
         config_depth: *ob_camera_default_config_depth
       "192.168.0.231":
         device_name: "camera1"
-        config_rgb: *ob_camera_default_config_rgb
+        config_rgb: *ob_camera_default_config_network_rgb
         config_depth: *ob_camera_default_config_depth
       "192.168.0.232":
         device_name: "camera2"
-        config_rgb: *ob_camera_default_config_rgb
+        config_rgb: *ob_camera_default_config_network_rgb
         config_depth: *ob_camera_default_config_depth
       "192.168.0.233":
         device_name: "camera3"
-        config_rgb: *ob_camera_default_config_rgb
+        config_rgb: *ob_camera_default_config_network_rgb
         config_depth: *ob_camera_default_config_depth

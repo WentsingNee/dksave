@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.12)
-project(DKSave CXX)
+project(
+        DKSave
+        LANGUAGES CXX
+        VERSION "2023.10.1"
+)
 
 set(CMAKE_CXX_STANDARD 20)
 message(STATUS "CMAKE_CXX_PLATFORM_ID: ${CMAKE_CXX_PLATFORM_ID}")
@@ -12,13 +16,13 @@ add_compile_definitions(NOMINMAX)
 add_executable(dksave src/main.cpp include/ucamera.hpp)
 target_include_directories(dksave PUBLIC include)
 
-string(REPLACE "/" "\\\\" DKSAVE_ROOT "${CMAKE_SOURCE_DIR}")
+string(REPLACE "/" "\\\\" DKSAVE_ROOT "${PROJECT_SOURCE_DIR}")
 string(APPEND DKSAVE_ROOT "\\\\")
 message(STATUS "DKSAVE_ROOT: ${DKSAVE_ROOT}")
 target_compile_definitions(dksave PUBLIC SOURCE_ROOT="${DKSAVE_ROOT}")
 
 
-include(${CMAKE_SOURCE_DIR}/cmake/instruction_extensions.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/instruction_extensions.cmake)
 target_wih_ie(dksave avx2)
 
 
@@ -28,27 +32,43 @@ option(DKSAVE_ENABLE_PCL "with pcl point cloud library support" OFF)
 
 
 # K4A
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/k4a.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/k4a.cmake)
 
 # OB
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/ob.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/ob.cmake)
 
 # OpenCV
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/opencv.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/opencv.cmake)
 
 # fmt
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/fmt.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/fmt.cmake)
 
 # pcl
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/pcl.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/pcl.cmake)
 
 # yaml-cpp
-include(${CMAKE_SOURCE_DIR}/cmake/third_party/yaml-cpp.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/yaml-cpp.cmake)
 
-find_package(Kerbal REQUIRED)
-target_link_libraries(dksave PUBLIC kerbal::Kerbal)
-target_compile_options(dksave PRIVATE /Zc:__cplusplus)
-add_compile_definitions(KERBAL_ENABLE_MODULES_EXPORT=0)
+# ffmpeg
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/ffmpeg.cmake)
+
+# Kerbal
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/Kerbal.cmake)
+
+
 
 include(GNUInstallDirs)
-install(TARGETS dksave)
+install(
+        TARGETS dksave
+)
+
+file(GLOB dlls_lib ${PROJECT_SOURCE_DIR}/dlls/*.dll)
+message(STATUS "${dlls_lib}")
+foreach (e ${dlls_lib})
+    install(
+            FILES "${e}"
+            TYPE BIN
+    )
+endforeach ()
+
+include(${PROJECT_SOURCE_DIR}/cmake/cpack.cmake)

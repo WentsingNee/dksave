@@ -2,10 +2,9 @@
  * @file       k4a_img_depth_transform_to_color_mode_context_t.hpp
  * @brief
  * @date       2023-06-30
- * @author     Peter
+ * @author     Wentsing Nee
  * @copyright
- *      Peter of [ThinkSpirit Laboratory](http://thinkspirit.org/)
- *   of [Nanjing University of Information Science & Technology](http://www.nuist.edu.cn/)
+ *      Wentsing Nee of China Agricultural University
  *   all rights reserved
  */
 

@@ -2,7 +2,10 @@
  * @file       main.cpp
  * @brief
  * @date       2022-10-06
- * @author     Peter
+ * @author     Wentsing Nee
+ * @copyright
+ *      Wentsing Nee of China Agricultural University
+ *   all rights reserved
  */
 
 #include "logger.hpp"
@@ -202,13 +205,14 @@ int main(int argc, char * argv[]) try
 					working_status status = get_working_status(start_time);
 
 					if (status != camera.previous_status) {
-						KERBAL_LOG_WRITE(KINFO, "Switch status from {} to {}.", camera.previous_status, status);
+						KERBAL_LOG_WRITE(KINFO, "Camera status switched. camera: {}, from: {}, to: {}",
+										 camera.device_name(), camera.previous_status, status);
 						camera.previous_status = status;
 					}
 
 					if (status == working_status::SLEEP) {
 						if (camera.enable()) {
-							KERBAL_LOG_WRITE(KINFO, "Camera {} fall in sleep.", camera.device_name());
+							KERBAL_LOG_WRITE(KINFO, "Camera fall in sleep. camera: {}", camera.device_name());
 							camera.stop();
 						}
 						std::this_thread::sleep_for(1min);
@@ -216,20 +220,20 @@ int main(int argc, char * argv[]) try
 					} else {
 						if (!camera.enable()) {
 							// 启动设备
-							KERBAL_LOG_WRITE(KINFO, "Camera {} is sleeping, try to wake up...", camera.device_name());
+							KERBAL_LOG_WRITE(KINFO, "Camera is sleeping, try to wake up... . camera: {}", camera.device_name());
 							try {
 								camera.start();
-								KERBAL_LOG_WRITE(KINFO, "Camera {} has been started.", camera.device_name());
+								KERBAL_LOG_WRITE(KINFO, "Camera has been started. camera: {}", camera.device_name());
 							} catch (...) {
-								KERBAL_LOG_WRITE(KERROR, "Waking up camara {} failed.", camera.device_name());
+								KERBAL_LOG_WRITE(KERROR, "Camera waked up failed. camera: {}", camera.device_name());
 								std::this_thread::sleep_for(30s);
 								continue;
 							}
 							try {
 								camera.stabilize();
-								KERBAL_LOG_WRITE(KINFO, "Camera {} has been stable.", camera.device_name());
+								KERBAL_LOG_WRITE(KINFO, "Camera has been stable. camera: {}", camera.device_name());
 							} catch (...) {
-								KERBAL_LOG_WRITE(KERROR, "Stabilization process of camara {} failed.",
+								KERBAL_LOG_WRITE(KERROR, "Stabilization process failed. camera: {}, next try period: 30s",
 												 camera.device_name());
 								std::this_thread::sleep_for(30s);
 								continue;
@@ -246,28 +250,70 @@ int main(int argc, char * argv[]) try
 						std::string date = format_systime_to_date(time);
 						std::string timestamp = format_systime_to_timestamp(time);
 
-						KERBAL_LOG_WRITE(KDEBUG, "Handling color. camera: {}, frame_count: {}", camera.device_name(),
+						KERBAL_LOG_WRITE(KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
 										 ctx.frame_count);
-						ctx.handle_color(date, timestamp);
-						KERBAL_LOG_WRITE(KVERBOSE, "Color handled done. camera: {}, frame_count: {}", camera.device_name(),
-										 ctx.frame_count);
+						try {
+							ctx.handle_color(date, timestamp);
+							KERBAL_LOG_WRITE(KVERBOSE, "Color frame handled success. camera: {}, frame_count: {}",
+											 camera.device_name(),
+											 ctx.frame_count);
+#		if DKSAVE_ENABLE_OB
+						} catch (H264_decode_error const &e) {
+							KERBAL_LOG_WRITE(KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
+											 camera.device_name(),
+											 ctx.frame_count);
+							continue;
+#		endif
+						} catch (std::exception const &e) {
+							KERBAL_LOG_WRITE(KERROR,
+											 "Color frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
+											 camera.device_name(),
+											 ctx.frame_count,
+											 typeid(e).name(),
+											 e.what()
+							);
+						} catch (...) {
+							KERBAL_LOG_WRITE(KERROR,
+											 "Color frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
+											 camera.device_name(),
+											 ctx.frame_count
+							);
+						}
 
-						KERBAL_LOG_WRITE(KDEBUG, "Handling depth. camera: {}, frame_count: {}", camera.device_name(),
+
+						KERBAL_LOG_WRITE(KDEBUG, "Handling depth frame. camera: {}, frame_count: {}", camera.device_name(),
 										 ctx.frame_count);
-						ctx.handle_depth(date, timestamp);
-						KERBAL_LOG_WRITE(KVERBOSE, "Depth handled done. camera: {}, frame_count: {}", camera.device_name(),
-										 ctx.frame_count);
+						try {
+							ctx.handle_depth(date, timestamp);
+							KERBAL_LOG_WRITE(KVERBOSE, "Depth frame handled success. camera: {}, frame_count: {}",
+											 camera.device_name(),
+											 ctx.frame_count);
+						} catch (std::exception const &e) {
+							KERBAL_LOG_WRITE(KERROR,
+											 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
+											 camera.device_name(),
+											 ctx.frame_count,
+											 typeid(e).name(),
+											 e.what()
+							);
+						} catch (...) {
+							KERBAL_LOG_WRITE(KERROR,
+											 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
+											 camera.device_name(),
+											 ctx.frame_count
+							);
+						}
 
 
 						ctx.frame_count++;
-						KERBAL_LOG_WRITE(KINFO, "Frame handled done. camera: {}, frame_count: {}", camera.device_name(),
+						KERBAL_LOG_WRITE(KINFO, "Capture handled success. camera: {}, frame_count: {}", camera.device_name(),
 										 ctx.frame_count);
 					} catch (std::exception const &e) {
-						KERBAL_LOG_WRITE(KERROR, "Unhandled exception. camera: {}, exception type: {}, what: {}",
+						KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: {}, what: {}",
 										 camera.device_name(),
 										 typeid(e).name(), e.what());
 					} catch (...) {
-						KERBAL_LOG_WRITE(KERROR, "Unhandled exception. camera: {}, exception type: unknown",
+						KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: unknown",
 										 camera.device_name());
 					}
 					std::this_thread::sleep_until(start_time + sleep_period);

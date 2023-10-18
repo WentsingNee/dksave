@@ -15,6 +15,15 @@
           "name": "CMAKE_PREFIX_PATH",
           "value": "C:/Program Files/Azure Kinect SDK v1.4.1/sdk/windows-desktop/amd64/release/;C:/Program Files/Azure Kinect SDK v1.4.1/sdk/include/;C:/Program Files/opencv/build/;C:/Program Files (x86)/FMT/;C:/Program Files (x86)/YAML_CPP/;C:/Program Files/PCL 1.13.1/;C:/Program Files/OrbbecSDK_v1.6.3/SDK/lib;C:/Program Files/OrbbecSDK_v1.6.3/SDK/include;",
           "type": "PATH"
+        },
+        {
+          "name": "DKSAVE_ENABLE_OB",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_TOOLCHAIN_FILE",
+          "value": "C:/Users/Peter/open_source/git/vcpkg/scripts/buildsystems/vcpkg.cmake"
         }
       ]
     }

@@ -32,6 +32,4 @@ else ()
 endif ()
 
 
-if (${fmt_FOUND})
-    target_link_libraries(dksave PUBLIC fmt::fmt-header-only)
-endif ()
+target_link_libraries(dksave PUBLIC fmt::fmt-header-only)
