@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <string>
+#include <stdexcept>
 #include <thread>
 #include <memory>
 #include <filesystem>
