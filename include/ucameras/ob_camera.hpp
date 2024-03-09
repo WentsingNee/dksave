@@ -18,12 +18,14 @@
 #include "save_cv_mat.hpp"
 #include "ucamera.hpp"
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <filesystem>
 
 #include <libobsensor/ObSensor.hpp>
 #include <opencv2/core.hpp>
+#include <fmt/format.h>
 
 
 namespace dksave_ob {

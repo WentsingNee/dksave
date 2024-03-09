@@ -16,11 +16,14 @@
 #include "ucameras/ob_camera.hpp"
 #include "logger.hpp"
 
+#include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include <cstdlib>
 
 #include <libobsensor/ObSensor.hpp>
+#include <fmt/format.h>
 #include <yaml-cpp/yaml.h>
 
 #include <kerbal/container/avl_set.hpp>

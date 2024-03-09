@@ -30,6 +30,8 @@
 // Kinect DK
 #include <k4a/k4a.hpp>
 
+#include <opencv2/core/mat.hpp>
+
 // PCL
 #if DKSAVE_ENABLE_PCL
 #	include <pcl/io/ply_io.h>

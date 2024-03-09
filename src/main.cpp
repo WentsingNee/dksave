@@ -22,12 +22,18 @@
 #include "working_status.hpp"
 
 #include <chrono>
+#include <iostream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <memory>
 #include <filesystem>
 #include <regex>
 #include <type_traits>
+
+#include <cstdlib>
+
+#include <fmt/format.h>
 
 // YAML-CPP
 #include <yaml-cpp/yaml.h>
