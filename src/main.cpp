@@ -40,7 +40,7 @@
 #include <kerbal/utility/tuple.hpp>
 
 
-static std::filesystem::path working_dir = R"(D:\dk.test\)";
+static std::filesystem::path working_dir;
 static std::chrono::milliseconds sleep_period = 48ms;
 
 /**
