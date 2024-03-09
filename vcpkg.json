@@ -1,0 +1,52 @@
+{
+  "name": "dksave",
+  "version-string": "2024.2.1",
+  "builtin-baseline": "0719a71389654b88d827501d88e37e58ea8cbd70",
+  "dependencies": [
+    {
+      "name": "fmt",
+      "version>=": "10.2.1"
+    },
+    {
+      "name": "kerbal",
+      "version>=": "2024.2.1"
+    },
+    {
+      "name": "opencv4",
+      "version>=": "4.8.0#15"
+    },
+    {
+      "name": "yaml-cpp",
+      "version>=": "0.8.0#1"
+    }
+  ],
+  "features": {
+    "k4a": {
+      "description": "enable k4a cameras support",
+      "dependencies": [
+        {
+          "name": "azure-kinect-sensor-sdk",
+          "version>=": "1.4.1#6"
+        }
+      ]
+    },
+    "ob": {
+      "description": "enable ob cameras support",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "version>=": "6.1.1#2"
+        }
+      ]
+    },
+    "pcl": {
+      "description": "enable pcl point cloud library support",
+      "dependencies": [
+        {
+          "name": "pcl",
+          "version>=": "1.14.0#2"
+        }
+      ]
+    }
+  }
+}

@@ -1,8 +1,25 @@
 cmake_minimum_required(VERSION 3.12)
+
+option(DKSAVE_ENABLE_K4A "enable k4a cameras support" OFF)
+option(DKSAVE_ENABLE_OB "enable ob cameras support" OFF)
+option(DKSAVE_ENABLE_PCL "enable pcl point cloud library support" OFF)
+
+if (DKSAVE_ENABLE_K4A)
+    list(APPEND VCPKG_MANIFEST_FEATURES "k4a")
+endif ()
+
+if (DKSAVE_ENABLE_OB)
+    list(APPEND VCPKG_MANIFEST_FEATURES "ob")
+endif ()
+
+if (DKSAVE_ENABLE_PCL)
+    list(APPEND VCPKG_MANIFEST_FEATURES "pcl")
+endif ()
+
 project(
         DKSave
         LANGUAGES CXX
-        VERSION "2023.10.1"
+        VERSION "2024.2.1"
 )
 
 set(CMAKE_CXX_STANDARD 20)
@@ -13,22 +30,13 @@ message(STATUS "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
 add_compile_definitions(NOMINMAX)
 
 
-add_executable(dksave src/main.cpp include/ucamera.hpp)
+add_executable(dksave src/main.cpp)
 target_include_directories(dksave PUBLIC include)
 
 string(REPLACE "/" "\\\\" DKSAVE_ROOT "${PROJECT_SOURCE_DIR}")
 string(APPEND DKSAVE_ROOT "\\\\")
 message(STATUS "DKSAVE_ROOT: ${DKSAVE_ROOT}")
 target_compile_definitions(dksave PUBLIC SOURCE_ROOT="${DKSAVE_ROOT}")
-
-
-include(${PROJECT_SOURCE_DIR}/cmake/instruction_extensions.cmake)
-target_wih_ie(dksave avx2)
-
-
-option(DKSAVE_ENABLE_K4A "with k4a cameras support" OFF)
-option(DKSAVE_ENABLE_OB "with ob cameras support" OFF)
-option(DKSAVE_ENABLE_PCL "with pcl point cloud library support" OFF)
 
 
 # K4A
@@ -62,11 +70,16 @@ install(
         TARGETS dksave
 )
 
-file(GLOB dlls_lib ${PROJECT_SOURCE_DIR}/dlls/*.dll)
-message(STATUS "${dlls_lib}")
-foreach (e ${dlls_lib})
+
+if (DKSAVE_ENABLE_OB)
+    file(GLOB dlls_lib_ob ${PROJECT_SOURCE_DIR}/dlls/ob/*.dll)
+endif ()
+
+
+foreach (dll_lib IN LISTS dlls_lib_ob)
+    message(STATUS "dll_lib: ${dll_lib}")
     install(
-            FILES "${e}"
+            FILES "${dll_lib}"
             TYPE BIN
     )
 endforeach ()

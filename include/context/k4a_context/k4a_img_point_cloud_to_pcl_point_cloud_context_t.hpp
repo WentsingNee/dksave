@@ -11,15 +11,7 @@
 #ifndef DKSAVE_K4A_IMG_POINT_CLOUD_TO_PCL_POINT_CLOUD_CONTEXT_T_HPP
 #define DKSAVE_K4A_IMG_POINT_CLOUD_TO_PCL_POINT_CLOUD_CONTEXT_T_HPP
 
-#ifndef DKSAVE_SUPPORT_PCL
-#   if __has_include(<pcl/point_cloud.h>)
-#    define DKSAVE_SUPPORT_PCL 1
-#   else
-#       define DKSAVE_SUPPORT_PCL 0
-#   endif
-#endif
-
-#if DKSAVE_SUPPORT_PCL
+#if DKSAVE_ENABLE_PCL
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>

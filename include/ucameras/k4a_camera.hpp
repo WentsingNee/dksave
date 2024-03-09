@@ -31,8 +31,8 @@
 #include <k4a/k4a.hpp>
 
 // PCL
-#if DKSAVE_SUPPORT_PCL
-#   include <pcl/io/ply_io.h>
+#if DKSAVE_ENABLE_PCL
+#	include <pcl/io/ply_io.h>
 #endif
 
 namespace dksave_k4a {
@@ -141,7 +141,7 @@ namespace dksave_k4a {
 			k4a_img_depth_to_cv_mat_context_t k4a_img_to_cv_mat_depth_context;
 			k4a_img_depth_transform_to_point_cloud_mode_context_t k4a_img_depth_transform_to_point_cloud_mode_context;
 
-#if DKSAVE_SUPPORT_PCL
+#if DKSAVE_ENABLE_PCL
 			k4a_img_point_cloud_to_pcl_point_cloud_context_t k4a_img_point_cloud_to_pcl_point_cloud_context;
 #endif
 
@@ -226,7 +226,7 @@ namespace dksave_k4a {
 									 filename_depth.string());
 				}
 
-#if DKSAVE_SUPPORT_PCL
+#if DKSAVE_ENABLE_PCL
 				const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed_to_color);
 				const pcl::PointCloud<pcl::PointXYZ> & pcl_point_cloud = k4a_img_point_cloud_to_pcl_point_cloud_context.convert(k4a_img_point_cloud);
 				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");

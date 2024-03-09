@@ -4,15 +4,10 @@ option(DKSAVE_DOWNLOAD_OB "download OB" OFF)
 
 if (DKSAVE_ENABLE_OB)
     message(STATUS "Finding libob")
+    find_package(OrbbecSDK REQUIRED)
+    message(STATUS "Finding libob -- Found")
 
-    find_library(libob OrbbecSDK REQUIRED)
-    message(STATUS "Found libob: ${libob}")
-    target_link_libraries(dksave PUBLIC "${libob}")
-
-    find_path(includeob libobsensor/ObSensor.hpp REQUIRED)
-    message(STATUS "Found includeob: ${includeob}")
-    target_include_directories(dksave PUBLIC "${includeob}")
-
+    target_link_libraries(dksave PRIVATE OrbbecSDK::OrbbecSDK)
 endif ()
 
 
