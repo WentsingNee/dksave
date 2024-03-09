@@ -313,6 +313,10 @@ int main(int argc, char * argv[]) try
 	std::filesystem::path config_yaml_path = argv[1];
 
 	KERBAL_LOG_WRITE(KINFO, "Config YAML path: {}", config_yaml_path.string());
+	if (!std::filesystem::exists(config_yaml_path)) {
+		KERBAL_LOG_WRITE(KFATAL, "Config YAML file not found");
+		exit(EXIT_FAILURE);
+	}
 	YAML::Node yaml_root_node;
 	try {
 		yaml_root_node = YAML::LoadFile(config_yaml_path.string());
