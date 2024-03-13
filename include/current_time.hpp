@@ -14,53 +14,33 @@
 #include <string>
 #include <chrono>
 
-#include <ctime>
-#include <windows.h>
+#include <fmt/chrono.h>
 
-#include <fmt/format.h>
 
-inline
-std::string format_systime_to_date(const SYSTEMTIME & time)
+template <typename Duration>
+std::string format_systime_to_date(std::chrono::sys_time<Duration> const & sys_time)
 {
-	return fmt::format("{:4}-{:02}-{:02}",
-		time.wYear, time.wMonth, time.wDay
-	);
-}
-
-inline
-std::string format_systime_to_time(const SYSTEMTIME & time)
-{
-	return fmt::format("{:4}-{:02}-{:02} {:02}:{:02}:{:02}",
-		time.wYear, time.wMonth, time.wDay,
-		time.wHour, time.wMinute, time.wSecond
-	);
-}
-
-inline
-std::string format_systime_to_timestamp(const SYSTEMTIME & time)
-{
-	return fmt::format("{:4}-{:02}-{:02}_{:02}-{:02}-{:02}-{:03}",
-		time.wYear, time.wMonth, time.wDay,
-		time.wHour, time.wMinute, time.wSecond, time.wMilliseconds
-   );
+	auto local_time = std::chrono::current_zone()->to_local<Duration>(sys_time);
+	auto floor_time = std::chrono::floor<std::chrono::days>(local_time);
+	return fmt::format("{:%Y-%m-%d}", floor_time);
 }
 
 
-//template <typename Clock, typename Dur>
-//std::string format_time_point_to_time(std::chrono::time_point<Clock, Dur> const & time_point)
-//template <typename Clock, typename Dur>
-std::string format_time_point_to_time(std::chrono::time_point<std::chrono::system_clock> const & time_point_)
+template <typename Duration>
+std::string format_systime_to_datetime(std::chrono::sys_time<Duration> const & sys_time)
 {
-	auto time_point = std::chrono::zoned_time<std::chrono::milliseconds>().get_local_time();
-	using time_point_t = decltype(time_point);
-	auto midnight = std::chrono::floor<std::chrono::days>(time_point);
-	auto hour = std::chrono::floor<std::chrono::hours>(time_point);
-	auto min = std::chrono::floor<std::chrono::minutes>(time_point);
-	auto sec = std::chrono::floor<std::chrono::seconds>(time_point);
-	return fmt::format("{:4}-{:02}-{:02} {:02}:{:02}:{:02}",
-					   2022, 9, 9,
-					   (hour - midnight).count(), (min - hour).count(), (sec - min).count()
-	);
+	auto local_time = std::chrono::current_zone()->to_local<Duration>(sys_time);
+	auto floor_time = std::chrono::floor<std::chrono::seconds>(local_time);
+	return fmt::format("{:%Y-%m-%d %H:%M:%S}", floor_time);
+}
+
+template <typename Duration>
+std::string format_systime_to_datetime_milli(std::chrono::sys_time<Duration> const & sys_time)
+{
+	auto local_time = std::chrono::current_zone()->to_local<Duration>(sys_time);
+	auto floor_time = std::chrono::floor<std::chrono::milliseconds>(local_time);
+	auto floor_seconds = std::chrono::floor<std::chrono::seconds>(floor_time);
+	return fmt::format("{:%Y-%m-%d_%H-%M-%S}-{:03}", floor_seconds, (floor_time - floor_seconds).count());
 }
 
 #endif // DKSAVE_CURRENT_TIME_HPP

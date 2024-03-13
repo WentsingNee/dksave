@@ -139,18 +139,10 @@ namespace kerbal
 				return;
 			}
 
-			SYSTEMTIME time;
-			GetLocalTime(&time);
 			std::string s = fmt::format("{}  {:7}  {}:{}  {}",
-										format_systime_to_time(time),
+										format_systime_to_datetime(std::chrono::system_clock::now()),
 										kerbal::log::log_level_description(level),
 										src_file, line, std::move(info));
-
-//			auto now = std::chrono::system_clock::now();
-//			std::string s = fmt::format("{}  {:7}  {}:{}  {}",
-//										format_time_point_to_time(now),
-//										log_level_description(level),
-//										src_file, line, std::move(info));
 
 			static std::mutex write_mtx;
 
