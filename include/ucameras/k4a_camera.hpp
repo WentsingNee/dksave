@@ -24,9 +24,6 @@
 #include <string>
 #include <filesystem>
 
-#include <ctime>
-#include <windows.h>
-
 // Kinect DK
 #include <k4a/k4a.hpp>
 

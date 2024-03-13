@@ -190,11 +190,9 @@ void per_camera_working_thread(Camera_t & camera)
 		try {
 			ctx.do_capture();
 
-			SYSTEMTIME time;
-			GetLocalTime(&time);
-
-			std::string date = format_systime_to_date(time);
-			std::string timestamp = format_systime_to_timestamp(time);
+			auto capture_time = std::chrono::system_clock::now();
+			std::string date = format_systime_to_date(capture_time);
+			std::string timestamp = format_systime_to_datetime_milli(capture_time);
 
 			KERBAL_LOG_WRITE(KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
 							 ctx.frame_count);
