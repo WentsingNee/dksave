@@ -42,6 +42,8 @@
 
 static std::filesystem::path working_dir;
 static std::chrono::milliseconds sleep_period = 48ms;
+static std::chrono::milliseconds frame_handle_timeout_rgb = 150ms;
+static std::chrono::milliseconds frame_handle_timeout_depth = 150ms;
 
 /**
  * 将 hh:mm:ss 格式的字符串转换为 std::chrono::seconds
@@ -107,6 +109,27 @@ void parse_global_settings(YAML::Node const & config_node)
 		std::string s = config_node["end_time"].as<std::string>();
 		end_time = parse_clock(s);
 		KERBAL_LOG_WRITE(KINFO, "Parse end_time success. end_time: {}", s);
+	});
+
+
+	YAML::Node frame_handle_timeout_node = config_node["frame_handle_timeout"];
+
+	parse_field("frame_handle_timeout.rgb", [&frame_handle_timeout_node]() {
+		int frame_handle_timeout_rgb = frame_handle_timeout_node["rgb"].as<int>();
+		::frame_handle_timeout_rgb = std::chrono::milliseconds(frame_handle_timeout_rgb);
+		KERBAL_LOG_WRITE(
+			KINFO, "Parse frame_handle_timeout.rgb success. frame_handle_timeout.rgb: {}",
+			frame_handle_timeout_rgb
+		);
+	});
+
+	parse_field("frame_handle_timeout.depth", [&frame_handle_timeout_node]() {
+		int frame_handle_timeout_depth = frame_handle_timeout_node["depth"].as<int>();
+		::frame_handle_timeout_depth = std::chrono::milliseconds(frame_handle_timeout_depth);
+		KERBAL_LOG_WRITE(
+			KINFO, "Parse frame_handle_timeout.depth success. frame_handle_timeout.depth: {}",
+			frame_handle_timeout_depth
+		);
 	});
 
 	parse_field("log_level", [&config_node]() {
@@ -204,6 +227,8 @@ void per_camera_working_thread(Camera_t & camera)
 			std::string date = dksave::format_systime_to_date(capture_time);
 			std::string timestamp = dksave::format_systime_to_datetime_milli(capture_time);
 
+			auto handle_rgb_start = std::chrono::system_clock::now();
+
 			KERBAL_LOG_WRITE(
 				KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
 				ctx.frame_count
@@ -239,6 +264,23 @@ void per_camera_working_thread(Camera_t & camera)
 				);
 			}
 
+			auto handle_rgb_end = std::chrono::system_clock::now();
+			auto handle_rgb_cost = std::chrono::duration_cast<std::chrono::milliseconds>(handle_rgb_end - handle_rgb_start);
+			auto handle_rgb_cost_in_milli = handle_rgb_cost.count();
+			if (handle_rgb_cost_in_milli > frame_handle_timeout_rgb.count()) {
+				KERBAL_LOG_WRITE(
+					KWARNING, "Handling rgb takes time: {} ms, frame cnt: {}",
+					handle_rgb_cost_in_milli, ctx.frame_count
+				);
+			} else {
+				KERBAL_LOG_WRITE(
+					KVERBOSE, "Handling rgb takes time: {} ms, frame cnt: {}",
+					handle_rgb_cost_in_milli, ctx.frame_count
+				);
+			}
+
+
+			auto handle_depth_start = std::chrono::system_clock::now();
 
 			KERBAL_LOG_WRITE(
 				KDEBUG, "Handling depth frame. camera: {}, frame_count: {}",
@@ -264,6 +306,21 @@ void per_camera_working_thread(Camera_t & camera)
 					KERROR, "Depth frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
 					camera.device_name(),
 					ctx.frame_count
+				);
+			}
+
+			auto handle_depth_end = std::chrono::system_clock::now();
+			auto handle_depth_cost = std::chrono::duration_cast<std::chrono::milliseconds>(handle_depth_end - handle_depth_start);
+			auto handle_depth_cost_in_milli = handle_depth_cost.count();
+			if (handle_depth_cost_in_milli > frame_handle_timeout_depth.count()) {
+				KERBAL_LOG_WRITE(
+					KWARNING, "Handling depth takes time: {} ms, frame cnt: {}",
+					handle_depth_cost_in_milli, ctx.frame_count
+				);
+			} else {
+				KERBAL_LOG_WRITE(
+					KVERBOSE, "Handling depth takes time: {} ms, frame cnt: {}",
+					handle_depth_cost_in_milli, ctx.frame_count
 				);
 			}
 
