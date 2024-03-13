@@ -139,6 +139,134 @@ static void parse_global_settings(YAML::Node const & config_node)
 }
 
 
+template <ucamera Camera_t>
+void per_camera_working_thread(Camera_t & camera)
+{
+	typename Camera_t::capture_loop_context ctx(&camera, working_dir);
+	while (true) {
+		using namespace std::chrono_literals;
+
+		auto start_time = std::chrono::system_clock::now();
+
+		working_status status = get_working_status(start_time);
+
+		if (status != camera.previous_status) {
+			KERBAL_LOG_WRITE(KINFO, "Camera status switched. camera: {}, from: {}, to: {}",
+							 camera.device_name(), camera.previous_status, status);
+			camera.previous_status = status;
+		}
+
+		if (status == working_status::SLEEP) {
+			if (camera.enable()) {
+				KERBAL_LOG_WRITE(KINFO, "Camera fall in sleep. camera: {}", camera.device_name());
+				camera.stop();
+			}
+			std::this_thread::sleep_for(1min);
+			continue;
+		} else {
+			if (!camera.enable()) {
+				// 启动设备
+				KERBAL_LOG_WRITE(KINFO, "Camera is sleeping, try to wake up... . camera: {}", camera.device_name());
+				try {
+					camera.start();
+					KERBAL_LOG_WRITE(KINFO, "Camera has been started. camera: {}", camera.device_name());
+				} catch (...) {
+					KERBAL_LOG_WRITE(KERROR, "Camera waked up failed. camera: {}", camera.device_name());
+					std::this_thread::sleep_for(30s);
+					continue;
+				}
+				try {
+					camera.stabilize();
+					KERBAL_LOG_WRITE(KINFO, "Camera has been stable. camera: {}", camera.device_name());
+				} catch (...) {
+					KERBAL_LOG_WRITE(KERROR, "Stabilization process failed. camera: {}, next try period: 30s",
+									 camera.device_name());
+					std::this_thread::sleep_for(30s);
+					continue;
+				}
+			}
+		}
+
+		try {
+			ctx.do_capture();
+
+			SYSTEMTIME time;
+			GetLocalTime(&time);
+
+			std::string date = format_systime_to_date(time);
+			std::string timestamp = format_systime_to_timestamp(time);
+
+			KERBAL_LOG_WRITE(KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
+							 ctx.frame_count);
+			try {
+				ctx.handle_color(date, timestamp);
+				KERBAL_LOG_WRITE(KVERBOSE, "Color frame handled success. camera: {}, frame_count: {}",
+								 camera.device_name(),
+								 ctx.frame_count);
+#		if DKSAVE_ENABLE_OB
+			} catch (H264_decode_error const &e) {
+				KERBAL_LOG_WRITE(KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
+								 camera.device_name(),
+								 ctx.frame_count);
+				continue;
+#		endif
+			} catch (std::exception const &e) {
+				KERBAL_LOG_WRITE(KERROR,
+								 "Color frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
+								 camera.device_name(),
+								 ctx.frame_count,
+								 typeid(e).name(),
+								 e.what()
+				);
+			} catch (...) {
+				KERBAL_LOG_WRITE(KERROR,
+								 "Color frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
+								 camera.device_name(),
+								 ctx.frame_count
+				);
+			}
+
+
+			KERBAL_LOG_WRITE(KDEBUG, "Handling depth frame. camera: {}, frame_count: {}", camera.device_name(),
+							 ctx.frame_count);
+			try {
+				ctx.handle_depth(date, timestamp);
+				KERBAL_LOG_WRITE(KVERBOSE, "Depth frame handled success. camera: {}, frame_count: {}",
+								 camera.device_name(),
+								 ctx.frame_count);
+			} catch (std::exception const &e) {
+				KERBAL_LOG_WRITE(KERROR,
+								 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
+								 camera.device_name(),
+								 ctx.frame_count,
+								 typeid(e).name(),
+								 e.what()
+				);
+			} catch (...) {
+				KERBAL_LOG_WRITE(KERROR,
+								 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
+								 camera.device_name(),
+								 ctx.frame_count
+				);
+			}
+
+
+			ctx.frame_count++;
+			KERBAL_LOG_WRITE(KINFO, "Capture handled success. camera: {}, frame_count: {}", camera.device_name(),
+							 ctx.frame_count);
+		} catch (std::exception const &e) {
+			KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: {}, what: {}",
+							 camera.device_name(),
+							 typeid(e).name(), e.what());
+		} catch (...) {
+			KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: unknown",
+							 camera.device_name());
+		}
+		std::this_thread::sleep_until(start_time + sleep_period);
+	}
+}
+
+
 int main(int argc, char * argv[]) try
 {
 	if (argc < 2) {
@@ -194,131 +322,8 @@ int main(int argc, char * argv[]) try
 	kerbal::container::vector<std::thread> threads;
 	cameras_collections.for_each([&threads](auto _, auto & cameras) {
 		for (auto & camera: cameras) {
-			threads.emplace_back([&camera]() {
-				using camera_t = std::remove_reference_t<decltype(camera)>;
-				typename camera_t::capture_loop_context ctx(&camera, working_dir);
-				while (true) {
-					using namespace std::chrono_literals;
-
-					auto start_time = std::chrono::system_clock::now();
-
-					working_status status = get_working_status(start_time);
-
-					if (status != camera.previous_status) {
-						KERBAL_LOG_WRITE(KINFO, "Camera status switched. camera: {}, from: {}, to: {}",
-										 camera.device_name(), camera.previous_status, status);
-						camera.previous_status = status;
-					}
-
-					if (status == working_status::SLEEP) {
-						if (camera.enable()) {
-							KERBAL_LOG_WRITE(KINFO, "Camera fall in sleep. camera: {}", camera.device_name());
-							camera.stop();
-						}
-						std::this_thread::sleep_for(1min);
-						continue;
-					} else {
-						if (!camera.enable()) {
-							// 启动设备
-							KERBAL_LOG_WRITE(KINFO, "Camera is sleeping, try to wake up... . camera: {}", camera.device_name());
-							try {
-								camera.start();
-								KERBAL_LOG_WRITE(KINFO, "Camera has been started. camera: {}", camera.device_name());
-							} catch (...) {
-								KERBAL_LOG_WRITE(KERROR, "Camera waked up failed. camera: {}", camera.device_name());
-								std::this_thread::sleep_for(30s);
-								continue;
-							}
-							try {
-								camera.stabilize();
-								KERBAL_LOG_WRITE(KINFO, "Camera has been stable. camera: {}", camera.device_name());
-							} catch (...) {
-								KERBAL_LOG_WRITE(KERROR, "Stabilization process failed. camera: {}, next try period: 30s",
-												 camera.device_name());
-								std::this_thread::sleep_for(30s);
-								continue;
-							}
-						}
-					}
-
-					try {
-						ctx.do_capture();
-
-						SYSTEMTIME time;
-						GetLocalTime(&time);
-
-						std::string date = format_systime_to_date(time);
-						std::string timestamp = format_systime_to_timestamp(time);
-
-						KERBAL_LOG_WRITE(KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
-										 ctx.frame_count);
-						try {
-							ctx.handle_color(date, timestamp);
-							KERBAL_LOG_WRITE(KVERBOSE, "Color frame handled success. camera: {}, frame_count: {}",
-											 camera.device_name(),
-											 ctx.frame_count);
-#		if DKSAVE_ENABLE_OB
-						} catch (H264_decode_error const &e) {
-							KERBAL_LOG_WRITE(KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
-											 camera.device_name(),
-											 ctx.frame_count);
-							continue;
-#		endif
-						} catch (std::exception const &e) {
-							KERBAL_LOG_WRITE(KERROR,
-											 "Color frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
-											 camera.device_name(),
-											 ctx.frame_count,
-											 typeid(e).name(),
-											 e.what()
-							);
-						} catch (...) {
-							KERBAL_LOG_WRITE(KERROR,
-											 "Color frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
-											 camera.device_name(),
-											 ctx.frame_count
-							);
-						}
-
-
-						KERBAL_LOG_WRITE(KDEBUG, "Handling depth frame. camera: {}, frame_count: {}", camera.device_name(),
-										 ctx.frame_count);
-						try {
-							ctx.handle_depth(date, timestamp);
-							KERBAL_LOG_WRITE(KVERBOSE, "Depth frame handled success. camera: {}, frame_count: {}",
-											 camera.device_name(),
-											 ctx.frame_count);
-						} catch (std::exception const &e) {
-							KERBAL_LOG_WRITE(KERROR,
-											 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
-											 camera.device_name(),
-											 ctx.frame_count,
-											 typeid(e).name(),
-											 e.what()
-							);
-						} catch (...) {
-							KERBAL_LOG_WRITE(KERROR,
-											 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: unknown",
-											 camera.device_name(),
-											 ctx.frame_count
-							);
-						}
-
-
-						ctx.frame_count++;
-						KERBAL_LOG_WRITE(KINFO, "Capture handled success. camera: {}, frame_count: {}", camera.device_name(),
-										 ctx.frame_count);
-					} catch (std::exception const &e) {
-						KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: {}, what: {}",
-										 camera.device_name(),
-										 typeid(e).name(), e.what());
-					} catch (...) {
-						KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: unknown",
-										 camera.device_name());
-					}
-					std::this_thread::sleep_until(start_time + sleep_period);
-				}
-			});
+			using camera_t = std::remove_reference_t<decltype(camera)>;
+			threads.emplace_back(per_camera_working_thread<camera_t>, std::ref(camera));
 		}
 	});
 
