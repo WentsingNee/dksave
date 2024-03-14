@@ -125,11 +125,9 @@ namespace dksave_k4a {
 			using capture_loop_context = dksave_k4a::capture_loop_context;
 	};
 
-	static_assert(::ucamera<camera>, "k4a_camera doesn't meet the requirement of ucamera");
-
 
 	class capture_loop_context {
-			camera *camera;
+			dksave_k4a::camera *camera;
 			std::filesystem::path camera_working_dir;
 
 			std::filesystem::path path_base_color = camera_working_dir / "rgb";
@@ -241,6 +239,10 @@ namespace dksave_k4a {
 			}
 
 	};
+
+
+	static_assert(::ucamera<camera>, "k4a_camera doesn't meet the requirement of ucamera");
+
 
 } // namespace dksave_k4a
 

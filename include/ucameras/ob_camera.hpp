@@ -132,11 +132,9 @@ namespace dksave_ob {
 			friend capture_loop_context;
 	};
 
-	static_assert(::ucamera<camera>, "ob_camera doesn't meet the requirement of ucamera");
-
 
 	class capture_loop_context {
-			camera *camera;
+			dksave_ob::camera *camera;
 
 			std::filesystem::path camera_working_dir;
 
@@ -245,6 +243,10 @@ namespace dksave_ob {
 			}
 
 	};
+
+
+	static_assert(::ucamera<camera>, "ob_camera doesn't meet the requirement of ucamera");
+
 
 } // namespace dksave_ob
 
