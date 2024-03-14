@@ -102,7 +102,7 @@ namespace dksave_k4a {
 						} catch (std::exception const &e) {
 							KERBAL_LOG_WRITE(KFATAL, "Parse device_name failed. exception type: {}, what: {}",
 											 typeid(e).name(), e.what());
-							throw;
+							exit(EXIT_FAILURE);
 						}
 
 						auto uir = device_name_used.insert(device_name);
