@@ -28,6 +28,9 @@ message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
 
 add_compile_definitions(NOMINMAX)
+if (CMAKE_CXX_COMPILER MATCHES "GNU")
+    add_compile_options(-fconcepts)
+endif ()
 
 
 add_executable(dksave src/main.cpp)

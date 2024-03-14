@@ -81,7 +81,7 @@ class H264_bad_alloc : std::bad_alloc
 		{
 		}
 
-		virtual char const * what() const {
+		virtual char const * what() const noexcept {
 			return msg.c_str();
 		}
 };
