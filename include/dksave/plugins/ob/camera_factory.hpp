@@ -21,6 +21,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <variant>
 
 #include <cstdlib>
 
@@ -147,7 +148,7 @@ namespace dksave::plugins_ob
 
 
 			find_cameras_context(YAML::Node const & yaml_config) :
-				cameras_node(yaml_config["ob_cameras"])
+				cameras_node(yaml_config["ob"]["cameras"])
 			{
 				ctx.setLoggerSeverity(OB_LOG_SEVERITY_OFF);
 				ctx.setLoggerToCallback(OB_LOG_SEVERITY_INFO, [](OBLogSeverity level, char const * message) {
@@ -312,7 +313,12 @@ namespace dksave::plugins_ob
 
 		public:
 			static
-			kerbal::container::vector<camera>
+			kerbal::container::vector<
+				std::variant<
+					camera,
+					kerbal::container::vector<camera>
+				>
+			>
 			find_cameras(YAML::Node const & yaml_config)
 			{
 				find_cameras_context ctx(yaml_config);
@@ -325,7 +331,16 @@ namespace dksave::plugins_ob
 					KERBAL_LOG_WRITE(KINFO, "OB cameras found finished. found: {}", ctx.cameras.size());
 				}
 
-				return ctx.cameras;
+				kerbal::container::vector<
+					std::variant<
+						camera,
+						kerbal::container::vector<camera>
+					>
+				> cameras_by_group;
+				for (auto & camera_ : ctx.cameras) {
+					cameras_by_group.emplace_back(std::in_place_type<camera>, std::move(camera_));
+				}
+				return cameras_by_group;
 			}
 	};
 
