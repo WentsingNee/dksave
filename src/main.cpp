@@ -24,6 +24,7 @@
 
 #include "dksave/logger.hpp"
 #include "dksave/scheduler/mono_camera_scheduler.hpp"
+#include "dksave/scheduler/sync_group_scheduler.hpp"
 #include "dksave/global_settings.hpp"
 
 #include <stdexcept>
@@ -99,17 +100,32 @@ int main(int argc, char * argv[]) try
 	});
 
 	kerbal::container::vector<std::thread> threads;
-	cameras_collections.for_each([&threads](auto _, auto & cameras) {
-		for (auto & camera : cameras) {
-			threads.emplace_back([&camera]() {
-				using camera_t = std::remove_reference_t<decltype(camera)>;
-				dksave::mono_camera_scheduler<camera_t> scheduler(camera);
-				scheduler.thread();
-			});
+	cameras_collections.for_each([&threads](auto _, auto & cameras_by_group) {
+		for (auto & group : cameras_by_group) {
+			if (group.index() == 0) {
+				dksave::ucamera auto & camera = std::get<0>(group);
+				threads.emplace_back([&camera]() {
+					using camera_t = std::remove_reference_t<decltype(camera)>;
+					dksave::mono_camera_scheduler<camera_t> scheduler(camera);
+					scheduler.thread();
+				});
+			} else {
+				auto & group_ = std::get<1>(group);
+				if (group_.size() < 2) {
+					KERBAL_LOG_WRITE(KFATAL, "A group needs at least two cameras");
+					exit(EXIT_FAILURE);
+				}
+				threads.emplace_back([&group_]() {
+					using camera_t = std::remove_reference_t<decltype(group_)>::value_type;
+					dksave::sync_group_scheduler<camera_t> scheduler(group_);
+					scheduler.thread();
+				});
+			}
 		}
 	});
 
 	// 等待所有线程结束
+	KERBAL_LOG_WRITE(KINFO, "Working threads created: {}", threads.size());
 	for (std::thread & thread : threads) {
 		thread.join();
 	}
