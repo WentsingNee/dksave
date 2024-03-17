@@ -57,7 +57,7 @@ concept ucamera = requires(Camera & camera, Camera const & kcamera)
 	{ camera.stabilize() };
 	{ camera.stop() };
 	requires noexcept(camera.stop());
-	capture_loop_context<typename Camera::capture_loop_context>;
+	requires capture_loop_context<typename Camera::capture_loop_context>;
 };
 
 #endif //DKSAVE_UCAMERA_HPP
