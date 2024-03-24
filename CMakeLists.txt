@@ -44,6 +44,9 @@ message(STATUS "DKSAVE_ROOT: ${DKSAVE_ROOT}")
 target_compile_definitions(dksave PUBLIC SOURCE_ROOT="${DKSAVE_ROOT}")
 
 
+# ctre
+include(${PROJECT_SOURCE_DIR}/cmake/third_party/ctre.cmake)
+
 # K4A
 include(${PROJECT_SOURCE_DIR}/cmake/third_party/k4a.cmake)
 

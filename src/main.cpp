@@ -27,10 +27,9 @@
 #include <thread>
 #include <memory>
 #include <filesystem>
-#include <regex>
 #include <type_traits>
 
-// YAML-CPP
+#include <ctre.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <kerbal/container/vector.hpp>
@@ -45,9 +44,9 @@ static std::chrono::milliseconds sleep_period = 48ms;
  */
 static std::chrono::seconds parse_clock(std::string const & s)
 {
-	static std::regex const pattern(R"(\d\d:\d\d:\d\d)");
-	if (!std::regex_match(s, pattern)) {
-		throw std::runtime_error("wrong clock format");
+	constexpr const char CLOCK_PATTERN[] = R"(\d\d:\d\d:\d\d)";
+	if (!ctre::match<CLOCK_PATTERN>(s)) {
+		throw std::runtime_error(fmt::format("wrong clock format. expect format: <hh:mm:ss>, got: \"{}\"", s));
 	}
 
 	int hour = std::stoi(s.substr(0, 2));

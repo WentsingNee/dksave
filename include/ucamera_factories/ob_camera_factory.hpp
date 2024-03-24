@@ -20,12 +20,12 @@
 
 #include <cstdlib>
 
+#include <ctre.hpp>
 #include <libobsensor/ObSensor.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <kerbal/container/avl_set.hpp>
 #include <kerbal/container/vector.hpp>
-#include <regex>
 
 
 namespace dksave_ob {
@@ -145,15 +145,12 @@ namespace dksave_ob {
 			ctx.setLoggerSeverity(OB_LOG_SEVERITY_OFF);
 			ctx.setLoggerToCallback(OB_LOG_SEVERITY_INFO, [](OBLogSeverity level, char const *message) {
 				try {
-					static std::regex const OB_LOG_PATTERN(R"(\[.*\]\[.*\]\[.*\]\[(.*):(\d+)\] (.*))");
-					std::cmatch match;
-					if (std::regex_search(message, match, OB_LOG_PATTERN)) {
-						std::string file(match[1].first, match[1].second);
-						std::string lines(match[2].first, match[2].second);
-						int line = std::stoi(lines);
-						std::string msg(match[3].first, match[3].second);
-						kerbal::log::log_write(std::cout, file.c_str(), line, ob_log_level_to_kerbal(level),
-											   fmt::format("{}", msg));
+					auto result = ctre::match<R"(\[.*\]\[.*\]\[.*\]\[(.*):(\d+)\] (.*))">(message);
+					if (result) {
+						std::string file(result.get<1>());
+						int line = std::stoi(result.get<2>().to_string());
+						std::string msg(result.get<3>());
+						kerbal::log::log_write(std::cout, file.c_str(), line, ob_log_level_to_kerbal(level), std::move(msg));
 						return;
 					}
 				} catch (...) {
