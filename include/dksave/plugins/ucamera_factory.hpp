@@ -19,21 +19,27 @@
 #include <kerbal/utility/tuple.hpp>
 
 
-template <typename Factory>
-concept ucamera_factory = requires (YAML::Node const &yaml_config) {
-	{ Factory::find_cameras(yaml_config) };
-};
-
-
-template <int _, ucamera_factory ... Factory>
-struct ucamera_factories :
-		kerbal::utility::tuple<Factory...>
+namespace dksave
 {
-	private:
-		using super = kerbal::utility::tuple<Factory...>;
 
-	public:
-		ucamera_factories() = default;
-};
+	template <typename Factory>
+	concept ucamera_factory = requires (YAML::Node const & yaml_config)
+	{
+		{ Factory::find_cameras(yaml_config) };
+	};
+
+
+	template <int _, ucamera_factory ... Factory>
+	struct ucamera_factories :
+		kerbal::utility::tuple<Factory...>
+	{
+		private:
+			using super = kerbal::utility::tuple<Factory...>;
+
+		public:
+			ucamera_factories() = default;
+	};
+
+} // namespace dksave
 
 #endif // DKSAVE_PLUGINS_UCAMERA_FACTORY_HPP

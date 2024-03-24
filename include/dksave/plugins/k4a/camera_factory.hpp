@@ -11,9 +11,10 @@
 #ifndef DKSAVE_PLUGINS_K4A_CAMERA_FACTORY_HPP
 #define DKSAVE_PLUGINS_K4A_CAMERA_FACTORY_HPP
 
-#include "dksave/plugins/ucamera_factory.hpp"
 #include "camera.hpp"
 #include "config.hpp"
+
+#include "dksave/plugins/ucamera_factory.hpp"
 #include "dksave/logger.hpp"
 
 #include <string>
@@ -27,20 +28,29 @@
 #include <kerbal/container/vector.hpp>
 
 
-namespace dksave_k4a {
+namespace dksave::plugins_k4a
+{
 
-	class camera_factory {
+	class camera_factory
+	{
 
 		private:
-			static k4a_device_configuration_t parse_yaml_to_config(YAML::Node const &config_yaml)
+			static
+			k4a_device_configuration_t parse_yaml_to_config(YAML::Node const & config_yaml)
 			{
 				k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 
-				auto parse_field = [](YAML::Node const &config_yaml, k4a_device_configuration_t &config_k4a, const char * field_name, auto field, auto deserializer) {
+				auto parse_field = [](
+					YAML::Node const & config_yaml,
+					k4a_device_configuration_t & config_k4a,
+					const char * field_name,
+					auto field,
+					auto deserializer
+				) {
 					std::string s;
 					try {
 						s = config_yaml[field_name].as<std::string>();
-					} catch (YAML::InvalidNode const &e) {
+					} catch (YAML::InvalidNode const & e) {
 						KERBAL_LOG_WRITE(KERROR, "Invalid node. key: {}, what: {}", field_name, e.what());
 						throw;
 					}
@@ -59,8 +69,9 @@ namespace dksave_k4a {
 
 		public:
 			static
-			kerbal::container::vector<dksave_k4a::camera>
-			find_cameras(YAML::Node const &yaml_config) {
+			kerbal::container::vector<camera>
+			find_cameras(YAML::Node const & yaml_config)
+			{
 				// 找到并打开 Azure Kinect 设备
 				uint32_t device_count = k4a::device::get_installed_count(); // 发现已连接的设备数
 				if (0 == device_count) {
@@ -71,7 +82,7 @@ namespace dksave_k4a {
 				KERBAL_LOG_WRITE(KINFO, "Found {} connected cameras.", device_count);
 
 				YAML::Node cameras_node = yaml_config["k4a_cameras"];
-				kerbal::container::vector<dksave_k4a::camera> cameras;
+				kerbal::container::vector<camera> cameras;
 				kerbal::container::avl_set<std::string> device_name_used;
 				cameras.reserve(device_count);
 
@@ -99,9 +110,11 @@ namespace dksave_k4a {
 						std::string device_name;
 						try {
 							device_name = camera_node["device_name"].as<std::string>();
-						} catch (std::exception const &e) {
-							KERBAL_LOG_WRITE(KFATAL, "Parse device_name failed. exception type: {}, what: {}",
-											 typeid(e).name(), e.what());
+						} catch (std::exception const & e) {
+							KERBAL_LOG_WRITE(
+								KFATAL, "Parse device_name failed. exception type: {}, what: {}",
+								typeid(e).name(), e.what()
+							);
 							exit(EXIT_FAILURE);
 						}
 
@@ -111,15 +124,17 @@ namespace dksave_k4a {
 							exit(EXIT_FAILURE);
 						}
 
-						KERBAL_LOG_WRITE(KINFO,
-										 "Open the {}-th camera with arg: serial_num: {}, config: {}, device_name: {}",
-										 i,
-										 serial_num, config, device_name);
+						KERBAL_LOG_WRITE(
+							KINFO, "Open the {}-th camera with arg: serial_num: {}, config: {}, device_name: {}",
+							i,
+							serial_num, config, device_name
+						);
 						cameras.emplace_back(std::move(device), device_name, config);
-					} catch (std::exception const &e) {
-						KERBAL_LOG_WRITE(KERROR, "Camara {} open failed. exception type: {}, what: {}", i,
-										 typeid(e).name(),
-										 e.what());
+					} catch (std::exception const & e) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Camara {} open failed. exception type: {}, what: {}", i,
+							typeid(e).name(), e.what()
+						);
 					} catch (...) {
 						KERBAL_LOG_WRITE(KERROR, "Camara {} open failed. what: unknown exception", i);
 						continue;
@@ -137,9 +152,11 @@ namespace dksave_k4a {
 
 	};
 
-	static_assert(ucamera_factory<camera_factory>,
-				  "k4a_camera_factory doesn't meet the requirement of ucamera_factory");
+	static_assert(
+		dksave::ucamera_factory<camera_factory>,
+		"k4a_camera_factory doesn't meet the requirement of ucamera_factory"
+	);
 
-} // namespace dksave_k4a
+} // namespace dksave::plugins_k4a
 
 #endif // DKSAVE_PLUGINS_K4A_CAMERA_FACTORY_HPP
