@@ -1,5 +1,5 @@
 /**
- * @file       k4a_camera_factory.hpp
+ * @file       camera_factory.hpp
  * @brief
  * @date       2023-09-24
  * @author     Wentsing Nee
@@ -8,13 +8,13 @@
  *   all rights reserved
  */
 
-#ifndef DKSAVE_K4A_CAMERA_FACTORY_HPP
-#define DKSAVE_K4A_CAMERA_FACTORY_HPP
+#ifndef DKSAVE_PLUGINS_K4A_CAMERA_FACTORY_HPP
+#define DKSAVE_PLUGINS_K4A_CAMERA_FACTORY_HPP
 
-#include "ucamera_factory.hpp"
-#include "ucameras/k4a_camera.hpp"
-#include "config/k4a_config.hpp"
-#include "logger.hpp"
+#include "dksave/plugins/ucamera_factory.hpp"
+#include "camera.hpp"
+#include "config.hpp"
+#include "dksave/logger.hpp"
 
 #include <string>
 
@@ -142,4 +142,4 @@ namespace dksave_k4a {
 
 } // namespace dksave_k4a
 
-#endif // DKSAVE_K4A_CAMERA_FACTORY_HPP
+#endif // DKSAVE_PLUGINS_K4A_CAMERA_FACTORY_HPP

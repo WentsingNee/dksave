@@ -8,9 +8,8 @@
  *   all rights reserved
  */
 
-
-#ifndef DKSAVE_UCAMERAFACTOR_HPP
-#define DKSAVE_UCAMERAFACTOR_HPP
+#ifndef DKSAVE_PLUGINS_UCAMERA_FACTORY_HPP
+#define DKSAVE_PLUGINS_UCAMERA_FACTORY_HPP
 
 #include "ucamera.hpp"
 
@@ -37,4 +36,4 @@ struct ucamera_factories :
 		ucamera_factories() = default;
 };
 
-#endif // DKSAVE_UCAMERAFACTOR_HPP
+#endif // DKSAVE_PLUGINS_UCAMERA_FACTORY_HPP

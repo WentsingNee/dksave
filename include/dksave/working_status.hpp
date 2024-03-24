@@ -8,7 +8,6 @@
  *   all rights reserved
  */
 
-
 #ifndef DKSAVE_WORKING_STATUS_HPP
 #define DKSAVE_WORKING_STATUS_HPP
 
@@ -89,4 +88,4 @@ static working_status get_working_status(std::chrono::time_point<std::chrono::sy
 }
 
 
-#endif //DKSAVE_WORKING_STATUS_HPP
+#endif // DKSAVE_WORKING_STATUS_HPP

@@ -8,8 +8,8 @@
  *   all rights reserved
  */
 
-#ifndef KERBAL_LOGGER_HPP
-#define KERBAL_LOGGER_HPP
+#ifndef DKSAVE_LOGGER_HPP
+#define DKSAVE_LOGGER_HPP
 
 #include <kerbal/utility/costream.hpp>
 
@@ -167,4 +167,4 @@ namespace kerbal
 } while(0)
 #endif
 
-#endif // KERBAL_LOGGER_HPP
+#endif // DKSAVE_LOGGER_HPP

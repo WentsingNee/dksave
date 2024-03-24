@@ -1,5 +1,5 @@
 /**
- * @file       k4a_config.hpp
+ * @file       config.hpp
  * @brief
  * @date       2023-08-26
  * @author     Wentsing Nee
@@ -8,8 +8,8 @@
  *   all rights reserved
  */
 
-#ifndef DKSAVE_K4A_CONFIG_HPP
-#define DKSAVE_K4A_CONFIG_HPP
+#ifndef DKSAVE_PLUGINS_K4A_CONFIG_HPP
+#define DKSAVE_PLUGINS_K4A_CONFIG_HPP
 
 #include <stdexcept>
 
@@ -178,4 +178,4 @@ class fmt::formatter<k4a_device_configuration_t> {
 		}
 };
 
-#endif // DKSAVE_K4A_CONFIG_HPP
+#endif // DKSAVE_PLUGINS_K4A_CONFIG_HPP

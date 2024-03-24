@@ -1,5 +1,5 @@
 /**
- * @file       ob_camera_factory.hpp
+ * @file       camera_factory.hpp
  * @brief
  * @date       2023-09-24
  * @author     Wentsing Nee
@@ -8,13 +8,13 @@
  *   all rights reserved
  */
 
-#ifndef DKSAVE_OB_CAMERA_FACTORY_HPP
-#define DKSAVE_OB_CAMERA_FACTORY_HPP
+#ifndef DKSAVE_PLUGINS_OB_CAMERA_FACTORY_HPP
+#define DKSAVE_PLUGINS_OB_CAMERA_FACTORY_HPP
 
-#include "config/ob_config.hpp"
-#include "ucamera_factory.hpp"
-#include "ucameras/ob_camera.hpp"
-#include "logger.hpp"
+#include "config.hpp"
+#include "dksave/plugins/ucamera_factory.hpp"
+#include "camera.hpp"
+#include "dksave/logger.hpp"
 
 #include <string>
 
@@ -291,4 +291,4 @@ namespace dksave_ob {
 
 } // namespace dksave_ob
 
-#endif // DKSAVE_OB_CAMERA_FACTORY_HPP
+#endif // DKSAVE_PLUGINS_OB_CAMERA_FACTORY_HPP

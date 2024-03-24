@@ -1,5 +1,5 @@
 /**
- * @file       ob_camera.hpp
+ * @file       camera.hpp
  * @brief
  * @date       2023-09-24
  * @author     Wentsing Nee
@@ -8,15 +8,14 @@
  *   all rights reserved
  */
 
+#ifndef DKSAVE_PLUGINS_OB_CAMERA_HPP
+#define DKSAVE_PLUGINS_OB_CAMERA_HPP
 
-#ifndef DKSAVE_OB_CAMERA_HPP
-#define DKSAVE_OB_CAMERA_HPP
-
-#include "config/ob_config.hpp"
-#include "context/ob_context/H264_to_cv_mat_context.hpp"
-#include "logger.hpp"
-#include "save_cv_mat.hpp"
-#include "ucamera.hpp"
+#include "config.hpp"
+#include "context/H264_to_cv_mat_context.hpp"
+#include "dksave/logger.hpp"
+#include "dksave/save_cv_mat.hpp"
+#include "dksave/plugins/ucamera.hpp"
 
 #include <memory>
 #include <string>
@@ -251,4 +250,4 @@ namespace dksave_ob {
 
 } // namespace dksave_ob
 
-#endif // DKSAVE_OB_CAMERA_HPP
+#endif // DKSAVE_PLUGINS_OB_CAMERA_HPP
