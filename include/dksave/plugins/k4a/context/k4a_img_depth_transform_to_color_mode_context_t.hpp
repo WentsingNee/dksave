@@ -14,18 +14,23 @@
 #include <k4a/k4a.hpp>
 
 
-/**
- * 本类负责将一张深度图片向可见光模式配准
- */
-struct k4a_img_depth_transform_to_color_mode_context_t
+namespace dksave::plugins_k4a
 {
-		k4a::image k4a_img_depth_transformed_to_color;
 
-		k4a::image & transform(const k4a::transformation & transformation, const k4a::image & k4a_img_depth)
-		{
-			this->k4a_img_depth_transformed_to_color = transformation.depth_image_to_color_camera(k4a_img_depth);
-			return this->k4a_img_depth_transformed_to_color;
-		}
-};
+	/**
+	 * 本类负责将一张深度图片向可见光模式配准
+	 */
+	struct k4a_img_depth_transform_to_color_mode_context_t
+	{
+			k4a::image k4a_img_depth_transformed_to_color;
+
+			k4a::image & transform(const k4a::transformation & transformation, const k4a::image & k4a_img_depth)
+			{
+				this->k4a_img_depth_transformed_to_color = transformation.depth_image_to_color_camera(k4a_img_depth);
+				return this->k4a_img_depth_transformed_to_color;
+			}
+	};
+
+} // namespace dksave::plugins_k4a
 
 #endif // DKSAVE_PLUGINS_K4A_CONTEXT_K4A_IMG_DEPTH_TRANSFORM_TO_COLOR_MODE_CONTEXT_T_HPP

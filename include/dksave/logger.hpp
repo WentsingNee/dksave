@@ -27,12 +27,12 @@
  */
 enum log_level
 {
-	KDEBUG = 0, ///< DEBUG 等级，供调试使用
-	KVERBOSE = 1, ///< VERBOSE 等级，用于输出一些繁杂信息
-	KINFO = 2, ///< INFO 等级，用于输出一些通知性信息
-	KWARNING = 3, ///< WARNING 等级，警告
-	KERROR = 4, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
-	KFATAL = 5, ///< FATAL 等级，表示极为严重的错误，一般遇到 FATAL 时程序已无法再继续运行
+		KDEBUG = 0, ///< DEBUG 等级，供调试使用
+		KVERBOSE = 1, ///< VERBOSE 等级，用于输出一些繁杂信息
+		KINFO = 2, ///< INFO 等级，用于输出一些通知性信息
+		KWARNING = 3, ///< WARNING 等级，警告
+		KERROR = 4, ///< ERROR 等级，表示遇到了一些错误，但是程序依旧可以带病运行
+		KFATAL = 5, ///< FATAL 等级，表示极为严重的错误，一般遇到 FATAL 时程序已无法再继续运行
 };
 
 
@@ -88,7 +88,8 @@ namespace kerbal
 		}
 
 		inline
-		kerbal::utility::costream::Color_t log_level_color(log_level level) {
+		kerbal::utility::costream::Color_t log_level_color(log_level level)
+		{
 			switch (level) {
 				case log_level::KDEBUG: {
 					return kerbal::utility::costream::LIGHT_PURPLE;
@@ -139,10 +140,12 @@ namespace kerbal
 				return;
 			}
 
-			std::string s = fmt::format("{}  {:7}  {}:{}  {}",
-										format_systime_to_datetime(std::chrono::system_clock::now()),
-										kerbal::log::log_level_description(level),
-										src_file, line, std::move(info));
+			std::string s = fmt::format(
+				"{}  {:7}  {}:{}  {}",
+				dksave::format_systime_to_datetime(std::chrono::system_clock::now()),
+				kerbal::log::log_level_description(level),
+				src_file, line, std::move(info)
+			);
 
 			static std::mutex write_mtx;
 

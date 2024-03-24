@@ -34,11 +34,14 @@
 #	include <pcl/io/ply_io.h>
 #endif
 
-namespace dksave_k4a {
+
+namespace dksave::plugins_k4a
+{
 
 	class capture_loop_context;
 
-	class camera : public ucamera_base {
+	class camera : public ucamera_base
+	{
 			using super = ucamera_base;
 
 			k4a::device k_device;
@@ -50,23 +53,28 @@ namespace dksave_k4a {
 			using super::previous_status;
 
 			camera(
-					k4a::device &&device,
-					std::string const &device_name,
-					k4a_device_configuration_t config) :
-					super(device_name),
-					k_device(std::move(device)),
-					k_config(std::move(config)) {
+				k4a::device && device,
+				std::string const & device_name,
+				k4a_device_configuration_t config
+			) :
+				super(device_name),
+				k_device(std::move(device)),
+				k_config(std::move(config))
+			{
 			}
 
-			k4a::device &device() {
+			k4a::device & device()
+			{
 				return k_device;
 			}
 
-			k4a_device_configuration_t const &config() const {
+			k4a_device_configuration_t const & config() const
+			{
 				return k_config;
 			}
 
-			void start() try {
+			void start() try
+			{
 				k_device.start_cameras(&k_config);
 				k_enable = true;
 				KERBAL_LOG_WRITE(KINFO, "Start camera {}.", k_device_name);
@@ -76,7 +84,8 @@ namespace dksave_k4a {
 			}
 
 			// 稳定化
-			void stabilize() try {
+			void stabilize() try
+			{
 				k4a::capture capture;
 				int success = 0; //用来稳定，类似自动曝光
 				int failed = 0; // 统计自动曝光的失败次数
@@ -114,19 +123,21 @@ namespace dksave_k4a {
 				throw;
 			}
 
-			void stop() noexcept {
+			void stop() noexcept
+			{
 				k_device.stop_cameras();
 				k_enable = false;
 			}
 
 		public:
 
-			using capture_loop_context = dksave_k4a::capture_loop_context;
+			using capture_loop_context = dksave::plugins_k4a::capture_loop_context;
 	};
 
 
-	class capture_loop_context {
-			dksave_k4a::camera *camera;
+	class capture_loop_context
+	{
+			dksave::plugins_k4a::camera * camera;
 			std::filesystem::path camera_working_dir;
 
 			std::filesystem::path path_base_color = camera_working_dir / "rgb";
@@ -134,6 +145,7 @@ namespace dksave_k4a {
 			std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
 
 			k4a_img_color_to_cv_mat_context_t k4a_img_color_to_cv_mat_context;
+
 			k4a_img_depth_transform_to_color_mode_context_t k4a_img_depth_transform_to_color_mode_context;
 			k4a_img_depth_to_cv_mat_context_t k4a_img_to_cv_mat_depth_context;
 			k4a_img_depth_transform_to_point_cloud_mode_context_t k4a_img_depth_transform_to_point_cloud_mode_context;
@@ -149,29 +161,33 @@ namespace dksave_k4a {
 			int frame_count = 0;
 
 		public:
-			capture_loop_context(class camera *camera, std::filesystem::path const &working_dir) :
-					camera(camera),
-					camera_working_dir(working_dir / this->camera->device_name()),
-					transformation(
-							camera->device().get_calibration(
-									camera->config().depth_mode,
-									camera->config().color_resolution
-							)
-					) {
+			capture_loop_context(class camera * camera, std::filesystem::path const & working_dir) :
+				camera(camera),
+				camera_working_dir(working_dir / this->camera->device_name()),
+				transformation(
+					camera->device().get_calibration(
+						camera->config().depth_mode,
+						camera->config().color_resolution
+					)
+				)
+			{
 			}
 
 
 		private:
-			static void describe_img(const k4a::image &img, const char type[]) {
+			static
+			void describe_img(const k4a::image & img, const char type[])
+			{
 				KERBAL_LOG_WRITE(KDEBUG, "[{}]", type);
-//			KERBAL_LOG_WRITE(KDEBUG, "format: {}", img.get_format());
+//				KERBAL_LOG_WRITE(KDEBUG, "format: {}", img.get_format());
 				KERBAL_LOG_WRITE(KDEBUG, "device_timestamp: {}", img.get_device_timestamp().count());
 				KERBAL_LOG_WRITE(KDEBUG, "system_timestamp: {}", img.get_system_timestamp().count());
 				KERBAL_LOG_WRITE(KDEBUG, "height: {}, width: {}", img.get_height_pixels(), img.get_width_pixels());
 			}
 
 		public:
-			void do_capture() {
+			void do_capture()
+			{
 				try {
 					camera->device().get_capture(&capture);
 				} catch (...) {
@@ -180,47 +196,58 @@ namespace dksave_k4a {
 				}
 			}
 
-			void handle_color(std::string const &date, std::string const &timestamp) {
+			void handle_color(std::string const & date, std::string const & timestamp)
+			{
 				if (!capture) {
 					return;
 				}
 
 				k4a::image k4a_img_color = capture.get_color_image();
 
-				const cv::Mat &cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(k4a_img_color);
+				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(k4a_img_color);
 				std::filesystem::path filename_color = path_base_color / date / (timestamp + ".png");
 				try {
 					save_cv_mat(cv_color_img_without_alpha, filename_color);
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: color image saved failed: {}", camera->device_name(),
-									 filename_color.string());
+					KERBAL_LOG_WRITE(
+						KERROR, "Camera {}: color image saved failed: {}",
+						camera->device_name(),
+						filename_color.string()
+					);
 				}
 			}
 
-			void handle_depth(std::string const &date, std::string const &timestamp) {
+			void handle_depth(std::string const & date, std::string const & timestamp)
+			{
 				if (!capture) {
 					return;
 				}
 
 				k4a::image k4a_img_depth = capture.get_depth_image();
-				k4a::image *k4a_img_depth_transformed_to_color = nullptr;
+				k4a::image * k4a_img_depth_transformed_to_color = nullptr;
 				try {
 					k4a_img_depth_transformed_to_color = &k4a_img_depth_transform_to_color_mode_context.transform(
-							transformation, k4a_img_depth);
+						transformation, k4a_img_depth);
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image transformation to color failed",
-									 camera->device_name());
+					KERBAL_LOG_WRITE(
+						KERROR, "Camera {}: depth image transformation to color failed",
+						camera->device_name()
+					);
 					return;
 				}
 
-				const cv::Mat &cv_depth_img = k4a_img_to_cv_mat_depth_context.convert(
-						*k4a_img_depth_transformed_to_color);
+				const cv::Mat & cv_depth_img = k4a_img_to_cv_mat_depth_context.convert(
+					*k4a_img_depth_transformed_to_color
+				);
 				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
 				try {
 					save_cv_mat(cv_depth_img, filename_depth);
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image saved failed: {}", camera->device_name(),
-									 filename_depth.string());
+					KERBAL_LOG_WRITE(
+						KERROR, "Camera {}: depth image saved failed: {}",
+						camera->device_name(),
+						filename_depth.string()
+					);
 				}
 
 #if DKSAVE_ENABLE_PCL
@@ -232,7 +259,11 @@ namespace dksave_k4a {
 					pcl::io::savePLYFile(filename_clouds.string(), pcl_point_cloud);
 					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds saved failed: {}", camera->device_name(), filename_depth.string());
+					KERBAL_LOG_WRITE(
+						KERROR, "Camera {}: depth clouds saved failed: {}",
+						camera->device_name(),
+						filename_depth.string()
+					);
 				}
 #endif
 			}
@@ -240,9 +271,9 @@ namespace dksave_k4a {
 	};
 
 
-	static_assert(::ucamera<camera>, "k4a_camera doesn't meet the requirement of ucamera");
+	static_assert(dksave::ucamera<camera>, "k4a_camera doesn't meet the requirement of ucamera");
 
 
-} // namespace dksave_k4a
+} // namespace dksave::plugins_k4a
 
 #endif // DKSAVE_PLUGINS_K4A_CAMERA_HPP
