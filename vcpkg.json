@@ -4,6 +4,10 @@
   "builtin-baseline": "0719a71389654b88d827501d88e37e58ea8cbd70",
   "dependencies": [
     {
+      "name": "ctre",
+      "version>=": "3.8.1"
+    },
+    {
       "name": "fmt",
       "version>=": "10.2.1"
     },
