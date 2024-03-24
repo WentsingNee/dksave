@@ -19,7 +19,8 @@
 #include <k4a/k4a.hpp>
 
 
-namespace dksave_k4a {
+namespace dksave::plugins_k4a
+{
 
 	inline k4a_fps_t str_to_camera_fps(char const * s)
 	{
@@ -92,14 +93,16 @@ namespace dksave_k4a {
 		throw std::runtime_error(fmt::format("Unknown depth_mode. Got: \"{}\"", s));
 	}
 
-} // namespace dksave_k4a
+} // namespace dksave::plugins_k4a
 
 
-template<>
-class fmt::formatter<k4a_device_configuration_t> {
+template <>
+class fmt::formatter<k4a_device_configuration_t>
+{
 
 		static
-		char const *camera_fps_to_str(k4a_device_configuration_t const &config) {
+		char const * camera_fps_to_str(k4a_device_configuration_t const & config)
+		{
 			switch (config.camera_fps) {
 				case K4A_FRAMES_PER_SECOND_5: return "5";
 				case K4A_FRAMES_PER_SECOND_15: return "15";
@@ -109,7 +112,8 @@ class fmt::formatter<k4a_device_configuration_t> {
 		}
 
 		static
-		char const *color_format_to_str(k4a_device_configuration_t const &config) {
+		char const * color_format_to_str(k4a_device_configuration_t const & config)
+		{
 			switch (config.color_format) {
 				case K4A_IMAGE_FORMAT_COLOR_MJPG: return "MJPG";
 				case K4A_IMAGE_FORMAT_COLOR_NV12: return "NV12";
@@ -125,7 +129,8 @@ class fmt::formatter<k4a_device_configuration_t> {
 		}
 
 		static
-		char const *color_resolution_to_str(k4a_device_configuration_t const &config) {
+		char const * color_resolution_to_str(k4a_device_configuration_t const & config)
+		{
 			switch (config.color_resolution) {
 				case K4A_COLOR_RESOLUTION_OFF: return "OFF";
 				case K4A_COLOR_RESOLUTION_720P: return "720P";
@@ -139,7 +144,8 @@ class fmt::formatter<k4a_device_configuration_t> {
 		}
 
 		static
-		char const *depth_mode_to_str(k4a_device_configuration_t const &config) {
+		char const * depth_mode_to_str(k4a_device_configuration_t const & config)
+		{
 			switch (config.depth_mode) {
 				case K4A_DEPTH_MODE_OFF: return "OFF";
 				case K4A_DEPTH_MODE_NFOV_2X2BINNED: return "NFOV_2X2BINNED";
@@ -154,26 +160,28 @@ class fmt::formatter<k4a_device_configuration_t> {
 	public:
 
 		auto
-		format(k4a_device_configuration_t const &config, format_context &ctx) const -> format_context::iterator {
+		format(k4a_device_configuration_t const & config, format_context & ctx) const -> format_context::iterator
+		{
 
 			fmt::format_to(
-					ctx.out(),
-					"{{\n"
-					"camera_fps: {}\n"
-					"color_format: {}\n"
-					"color_resolution: {}\n"
-					"depth_mode: {}\n"
-					"}}",
-					camera_fps_to_str(config),
-					color_format_to_str(config),
-					color_resolution_to_str(config),
-					depth_mode_to_str(config)
+				ctx.out(),
+				"{{\n"
+				"camera_fps: {}\n"
+				"color_format: {}\n"
+				"color_resolution: {}\n"
+				"depth_mode: {}\n"
+				"}}",
+				camera_fps_to_str(config),
+				color_format_to_str(config),
+				color_resolution_to_str(config),
+				depth_mode_to_str(config)
 			);
 
 			return ctx.out();
 		}
 
-		constexpr auto parse(format_parse_context &ctx) -> format_parse_context::iterator {
+		constexpr auto parse(format_parse_context & ctx) -> format_parse_context::iterator
+		{
 			return ctx.begin();
 		}
 };

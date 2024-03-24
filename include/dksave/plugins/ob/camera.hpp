@@ -13,6 +13,7 @@
 
 #include "config.hpp"
 #include "context/H264_to_cv_mat_context.hpp"
+
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
 #include "dksave/plugins/ucamera.hpp"
@@ -25,11 +26,13 @@
 #include <opencv2/core.hpp>
 
 
-namespace dksave_ob {
+namespace dksave::plugins_ob
+{
 
 	class capture_loop_context;
 
-	class camera : private ucamera_base {
+	class camera : private ucamera_base
+	{
 			using super = ucamera_base;
 
 			std::shared_ptr<ob::Device> k_device;
@@ -42,10 +45,12 @@ namespace dksave_ob {
 			using super::previous_status;
 
 		private:
-			static void show_profiles_supported(std::shared_ptr<ob::StreamProfileList> profile_list) {
+			static void show_profiles_supported(std::shared_ptr<ob::StreamProfileList> profile_list)
+			{
 				for (uint32_t i = 0; i < profile_list->count(); ++i) {
 					auto profile = std::const_pointer_cast<ob::StreamProfile>(
-							profile_list->getProfile(i))->as<ob::VideoStreamProfile>();
+						profile_list->getProfile(i)
+					)->as<ob::VideoStreamProfile>();
 					if (profile) {
 						std::cout << fmt::format("{}", *profile) << std::endl;
 					} else {
@@ -54,14 +59,15 @@ namespace dksave_ob {
 				}
 			}
 
-			void enable_color_stream(std::shared_ptr<ob::Config> config, dksave_ob::ob_camera_configuration const &dksave_config) {
+			void enable_color_stream(std::shared_ptr<ob::Config> config, ob_camera_configuration const & dksave_config)
+			{
 				KERBAL_LOG_WRITE(KINFO, "Enabling camera's color stream. camera: {}, config: {}", this->device_name(), dksave_config);
 				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_COLOR);
 				show_profiles_supported(profile_list);
 				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
 				try {
 					profile = profile_list->getVideoStreamProfile(dksave_config.width, dksave_config.height, dksave_config.format, dksave_config.fps);
-				} catch (ob::Error const &e) {
+				} catch (ob::Error const & e) {
 					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, config: {}, what: {}",
 									 this->device_name(), dksave_config, e.getMessage());
 				}
@@ -71,16 +77,17 @@ namespace dksave_ob {
 				}
 			}
 
-			void enable_depth_stream(std::shared_ptr<ob::Config> config, dksave_ob::ob_camera_configuration const &dksave_config) {
+			void enable_depth_stream(std::shared_ptr<ob::Config> config, ob_camera_configuration const & dksave_config)
+			{
 				KERBAL_LOG_WRITE(KINFO, "Enabling camera's depth stream. camera: {}, config: {}", this->device_name(), dksave_config);
 				auto profile_list = pipeline->getStreamProfileList(OB_SENSOR_DEPTH);
 				show_profiles_supported(profile_list);
 				std::shared_ptr<ob::VideoStreamProfile> profile = nullptr;
 				try {
 					profile = profile_list->getVideoStreamProfile(dksave_config.width, dksave_config.height, dksave_config.format, dksave_config.fps);
-				} catch (ob::Error const &e) {
+				} catch (ob::Error const & e) {
 					KERBAL_LOG_WRITE(KERROR, "Profile not supported. camera: {}, config: {}, what: {}",
-									 this->device_name(), dksave_config,  e.getMessage());
+									 this->device_name(), dksave_config, e.getMessage());
 				}
 				if (profile) {
 					config->enableStream(profile);
@@ -90,15 +97,15 @@ namespace dksave_ob {
 
 		public:
 			camera(
-					std::shared_ptr<ob::Device> &&device,
-					std::string const &device_name,
-					dksave_ob::ob_camera_configuration const &config_rgb,
-					dksave_ob::ob_camera_configuration const &config_depth
+				std::shared_ptr<ob::Device> && device,
+				std::string const & device_name,
+				ob_camera_configuration const & config_rgb,
+				ob_camera_configuration const & config_depth
 			) :
-					super(device_name),
-					k_device(std::move(device)),
-					config(std::make_shared<ob::Config>()),
-					pipeline(std::make_shared<ob::Pipeline>(this->device()))
+				super(device_name),
+				k_device(std::move(device)),
+				config(std::make_shared<ob::Config>()),
+				pipeline(std::make_shared<ob::Pipeline>(this->device()))
 			{
 				KERBAL_LOG_WRITE(KINFO, "Creating camera. camera: {}", this->device_name());
 				this->enable_color_stream(config, config_rgb);
@@ -107,33 +114,38 @@ namespace dksave_ob {
 				config->setDepthScaleRequire(true);
 			}
 
-			std::shared_ptr<ob::Device> &device() {
+			std::shared_ptr<ob::Device> & device()
+			{
 				return k_device;
 			}
 
-			void start() {
+			void start()
+			{
 				pipeline->start(config);
 				this->k_enable = true;
 			}
 
-			void stabilize() {
+			void stabilize()
+			{
 
 			}
 
-			void stop() noexcept try {
+			void stop() noexcept try
+			{
 				pipeline->stop();
 				this->k_enable = false;
-			} catch(...) {
+			} catch (...) {
 				this->k_enable = false;
 			}
 
-			using capture_loop_context = dksave_ob::capture_loop_context;
+			using capture_loop_context = dksave::plugins_ob::capture_loop_context;
 			friend capture_loop_context;
 	};
 
 
-	class capture_loop_context {
-			dksave_ob::camera *camera;
+	class capture_loop_context
+	{
+			dksave::plugins_ob::camera * camera;
 
 			std::filesystem::path camera_working_dir;
 
@@ -142,29 +154,33 @@ namespace dksave_ob {
 			std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
 
 			std::shared_ptr<ob::FrameSet> frame_set;
+
 			struct RGB_frame_to_cv_mat_context
 			{
-				cv::Mat cv_mat;
+					cv::Mat cv_mat;
 
-				cv::Mat const & cast(std::shared_ptr<ob::ColorFrame> color_frame)
-				{
-					this->cv_mat = cv::Mat(color_frame->height(), color_frame->width(), CV_8UC3, color_frame->data());
-					cv::cvtColor(this->cv_mat, this->cv_mat, cv::COLOR_RGB2BGR);
-					return this->cv_mat;
-				}
+					cv::Mat const & cast(std::shared_ptr<ob::ColorFrame> color_frame)
+					{
+						this->cv_mat = cv::Mat(color_frame->height(), color_frame->width(), CV_8UC3, color_frame->data());
+						cv::cvtColor(this->cv_mat, this->cv_mat, cv::COLOR_RGB2BGR);
+						return this->cv_mat;
+					}
 			} rgb_context;
+
 			H264_to_cv_mat_context h264_context;
 
 		public:
 			int frame_count = 0;
 
 		public:
-			capture_loop_context(class camera *camera, std::filesystem::path const &working_dir) :
-					camera(camera),
-					camera_working_dir(working_dir / this->camera->device_name()) {
+			capture_loop_context(class camera * camera, std::filesystem::path const & working_dir) :
+				camera(camera),
+				camera_working_dir(working_dir / this->camera->device_name())
+			{
 			}
 
-			void do_capture() {
+			void do_capture()
+			{
 				frame_set = camera->pipeline->waitForFrames(2000);
 				if (frame_set == nullptr) {
 					KERBAL_LOG_WRITE(KERROR, "Get capture failed. camera: {}", camera->device_name());
@@ -173,7 +189,8 @@ namespace dksave_ob {
 			}
 
 		public:
-			void handle_color(std::string const &date, std::string const &timestamp) {
+			void handle_color(std::string const & date, std::string const & timestamp)
+			{
 				if (!frame_set) {
 					return;
 				}
@@ -189,9 +206,9 @@ namespace dksave_ob {
 				cv::Mat const * color_mat = nullptr;
 				switch (color_frame->format()) {
 					case OB_FORMAT_H264: {
-//						KERBAL_LOG_WRITE(KDEBUG, "XXXX. DATA SIZE: {}",
-//										 color_frame->dataSize());
-						color_mat = &h264_context.decode(reinterpret_cast<std::uint8_t*>(color_frame->data()), color_frame->dataSize());
+						KERBAL_LOG_WRITE(KDEBUG, "Color frame dataSize: {}",
+										 color_frame->dataSize());
+						color_mat = &h264_context.decode(reinterpret_cast<std::uint8_t *>(color_frame->data()), color_frame->dataSize());
 						KERBAL_LOG_WRITE(KDEBUG, "Decode color frame from H.264 success. camera: {}",
 										 camera->device_name());
 						break;
@@ -218,7 +235,8 @@ namespace dksave_ob {
 				}
 			}
 
-			void handle_depth(std::string const &date, std::string const &timestamp) {
+			void handle_depth(std::string const & date, std::string const & timestamp)
+			{
 				if (!frame_set) {
 					return;
 				}
@@ -245,9 +263,9 @@ namespace dksave_ob {
 	};
 
 
-	static_assert(::ucamera<camera>, "ob_camera doesn't meet the requirement of ucamera");
+	static_assert(dksave::ucamera<camera>, "ob_camera doesn't meet the requirement of ucamera");
 
 
-} // namespace dksave_ob
+} // namespace dksave::plugins_ob
 
 #endif // DKSAVE_PLUGINS_OB_CAMERA_HPP

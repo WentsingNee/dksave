@@ -8,17 +8,21 @@
  *   all rights reserved
  */
 
-#include "dksave/logger.hpp"
-#include "dksave/plugins/ucamera_factory.hpp"
-
 #if DKSAVE_ENABLE_K4A
+
 #	include "dksave/plugins/k4a/camera_factory.hpp"
+
 #endif
 
 #if DKSAVE_ENABLE_OB
+
 #	include "dksave/plugins/ob/camera_factory.hpp"
+
 #endif
 
+#include "dksave/plugins/ucamera_factory.hpp"
+
+#include "dksave/logger.hpp"
 #include "dksave/working_status.hpp"
 
 #include <chrono>
@@ -139,7 +143,7 @@ static void parse_global_settings(YAML::Node const & config_node)
 }
 
 
-template <ucamera Camera_t>
+template <dksave::ucamera Camera_t>
 void per_camera_working_thread(Camera_t & camera)
 {
 	typename Camera_t::capture_loop_context ctx(&camera, working_dir);
@@ -148,7 +152,7 @@ void per_camera_working_thread(Camera_t & camera)
 
 		auto start_time = std::chrono::system_clock::now();
 
-		working_status status = get_working_status(start_time);
+		dksave::working_status status = dksave::get_working_status(start_time);
 
 		if (status != camera.previous_status) {
 			KERBAL_LOG_WRITE(KINFO, "Camera status switched. camera: {}, from: {}, to: {}",
@@ -156,7 +160,7 @@ void per_camera_working_thread(Camera_t & camera)
 			camera.previous_status = status;
 		}
 
-		if (status == working_status::SLEEP) {
+		if (status == dksave::working_status::SLEEP) {
 			if (camera.enable()) {
 				KERBAL_LOG_WRITE(KINFO, "Camera fall in sleep. camera: {}", camera.device_name());
 				camera.stop();
@@ -191,8 +195,8 @@ void per_camera_working_thread(Camera_t & camera)
 			ctx.do_capture();
 
 			auto capture_time = std::chrono::system_clock::now();
-			std::string date = format_systime_to_date(capture_time);
-			std::string timestamp = format_systime_to_datetime_milli(capture_time);
+			std::string date = dksave::format_systime_to_date(capture_time);
+			std::string timestamp = dksave::format_systime_to_datetime_milli(capture_time);
 
 			KERBAL_LOG_WRITE(KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
 							 ctx.frame_count);
@@ -202,13 +206,13 @@ void per_camera_working_thread(Camera_t & camera)
 								 camera.device_name(),
 								 ctx.frame_count);
 #		if DKSAVE_ENABLE_OB
-			} catch (H264_decode_error const &e) {
+			} catch (dksave::plugins_ob::H264_decode_error const & e) {
 				KERBAL_LOG_WRITE(KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
 								 camera.device_name(),
 								 ctx.frame_count);
 				continue;
 #		endif
-			} catch (std::exception const &e) {
+			} catch (std::exception const & e) {
 				KERBAL_LOG_WRITE(KERROR,
 								 "Color frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
 								 camera.device_name(),
@@ -232,7 +236,7 @@ void per_camera_working_thread(Camera_t & camera)
 				KERBAL_LOG_WRITE(KVERBOSE, "Depth frame handled success. camera: {}, frame_count: {}",
 								 camera.device_name(),
 								 ctx.frame_count);
-			} catch (std::exception const &e) {
+			} catch (std::exception const & e) {
 				KERBAL_LOG_WRITE(KERROR,
 								 "Depth frame handled failed. camera: {}, frame_count: {}, exception type: {}, what: {}",
 								 camera.device_name(),
@@ -252,7 +256,7 @@ void per_camera_working_thread(Camera_t & camera)
 			ctx.frame_count++;
 			KERBAL_LOG_WRITE(KINFO, "Capture handled success. camera: {}, frame_count: {}", camera.device_name(),
 							 ctx.frame_count);
-		} catch (std::exception const &e) {
+		} catch (std::exception const & e) {
 			KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: {}, what: {}",
 							 camera.device_name(),
 							 typeid(e).name(), e.what());
@@ -302,31 +306,31 @@ int main(int argc, char * argv[]) try
 	YAML::Node config_node = yaml_root_node["config"];
 	parse_global_settings(config_node);
 
-	ucamera_factories<
-			0
+	dksave::ucamera_factories<
+		0
 #if DKSAVE_ENABLE_K4A
-			, dksave_k4a::camera_factory
+		, dksave::plugins_k4a::camera_factory
 #endif
 #if DKSAVE_ENABLE_OB
-			, dksave_ob::camera_factory
+		, dksave::plugins_ob::camera_factory
 #endif
-	> factories {};
+	> factories{};
 
 
-	kerbal::utility::tuple cameras_collections = factories.transform([&config_node](auto _, ucamera_factory auto factory) {
+	kerbal::utility::tuple cameras_collections = factories.transform([&config_node](auto _, dksave::ucamera_factory auto factory) {
 		return factory.find_cameras(config_node);
 	});
 
 	kerbal::container::vector<std::thread> threads;
 	cameras_collections.for_each([&threads](auto _, auto & cameras) {
-		for (auto & camera: cameras) {
+		for (auto & camera : cameras) {
 			using camera_t = std::remove_reference_t<decltype(camera)>;
 			threads.emplace_back(per_camera_working_thread<camera_t>, std::ref(camera));
 		}
 	});
 
 	// 等待所有线程结束
-	for (std::thread & thread: threads) {
+	for (std::thread & thread : threads) {
 		thread.join();
 	}
 

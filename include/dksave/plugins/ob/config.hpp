@@ -17,7 +17,8 @@
 #include <libobsensor/ObSensor.hpp>
 
 
-namespace dksave_ob {
+namespace dksave::plugins_ob
+{
 
 	OBFormat str_to_OB_FORMAT(char const * s)
 	{
@@ -53,21 +54,24 @@ namespace dksave_ob {
 	}
 
 
-	struct ob_camera_configuration {
-		int width;
-		int height;
-		OBFormat format;
-		int fps;
+	struct ob_camera_configuration
+	{
+			int width;
+			int height;
+			OBFormat format;
+			int fps;
 	};
 
+} // namespace dksave::plugins_ob
 
-} // namespace dksave_ob
 
-template<>
-struct fmt::formatter<OBFormat> {
+template <>
+struct fmt::formatter<OBFormat>
+{
 
 		static
-		char const * OB_FORMAT_to_str(OBFormat format) {
+		char const * OB_FORMAT_to_str(OBFormat format)
+		{
 			switch (format) {
 				case OB_FORMAT_YUYV  : return    "YUYV format";
 				case OB_FORMAT_YUY2  : return    "YUY2 format (the actual format is the same as YUYV)";
@@ -102,57 +106,65 @@ struct fmt::formatter<OBFormat> {
 		}
 
 		auto
-		format(OBFormat const & format, format_context &ctx) const -> format_context::iterator {
+		format(OBFormat const & format, format_context & ctx) const -> format_context::iterator
+		{
 			fmt::format_to(
-					ctx.out(),
-					"{}", OB_FORMAT_to_str(format)
+				ctx.out(),
+				"{}", OB_FORMAT_to_str(format)
 			);
 			return ctx.out();
 		}
 
-		constexpr auto parse(format_parse_context &ctx) -> format_parse_context::iterator {
+		constexpr auto parse(format_parse_context & ctx) -> format_parse_context::iterator
+		{
 			return ctx.begin();
 		}
 };
 
 
-template<>
-struct fmt::formatter<dksave_ob::ob_camera_configuration> {
+template <>
+struct fmt::formatter<dksave::plugins_ob::ob_camera_configuration>
+{
 
-	auto
-	format(dksave_ob::ob_camera_configuration const & config, format_context &ctx) const -> format_context::iterator {
-		fmt::format_to(
+		auto
+		format(dksave::plugins_ob::ob_camera_configuration const & config, format_context & ctx) const -> format_context::iterator
+		{
+			fmt::format_to(
 				ctx.out(),
 				"{{width: {:5}, height: {:5}, format: {}, fps: {}}}",
 				config.width, config.height,
 				config.format, config.fps
-		);
-		return ctx.out();
-	}
+			);
+			return ctx.out();
+		}
 
-	constexpr auto parse(format_parse_context &ctx) -> format_parse_context::iterator {
-		return ctx.begin();
-	}
+		constexpr auto parse(format_parse_context & ctx) -> format_parse_context::iterator
+		{
+			return ctx.begin();
+		}
 
 };
 
-template<>
-struct fmt::formatter<ob::VideoStreamProfile> {
+template <>
+struct fmt::formatter<ob::VideoStreamProfile>
+{
 
-	auto
-	format(ob::VideoStreamProfile const & profile, format_context &ctx) const -> format_context::iterator {
-		fmt::format_to(
+		auto
+		format(ob::VideoStreamProfile const & profile, format_context & ctx) const -> format_context::iterator
+		{
+			fmt::format_to(
 				ctx.out(),
 				"{{width: {:5}, height: {:5}, format: {}, fps: {}}}",
 				profile.width(), profile.height(),
 				profile.format(), profile.fps()
-		);
-		return ctx.out();
-	}
+			);
+			return ctx.out();
+		}
 
-	constexpr auto parse(format_parse_context &ctx) -> format_parse_context::iterator {
-		return ctx.begin();
-	}
+		constexpr auto parse(format_parse_context & ctx) -> format_parse_context::iterator
+		{
+			return ctx.begin();
+		}
 
 };
 
