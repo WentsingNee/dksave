@@ -8,10 +8,10 @@
  *   all rights reserved
  */
 
-#ifndef DKSAVE_UCAMERA_HPP
-#define DKSAVE_UCAMERA_HPP
+#ifndef DKSAVE_PLUGINS_UCAMERA_HPP
+#define DKSAVE_PLUGINS_UCAMERA_HPP
 
-#include "working_status.hpp"
+#include "dksave/working_status.hpp"
 
 #include <string>
 
@@ -60,4 +60,4 @@ concept ucamera = requires(Camera & camera, Camera const & kcamera)
 	requires capture_loop_context<typename Camera::capture_loop_context>;
 };
 
-#endif //DKSAVE_UCAMERA_HPP
+#endif // DKSAVE_PLUGINS_UCAMERA_HPP

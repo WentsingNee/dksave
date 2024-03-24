@@ -8,7 +8,6 @@
  *   all rights reserved
  */
 
-
 #ifndef DKSAVE_SAVE_CV_MAT_HPP
 #define DKSAVE_SAVE_CV_MAT_HPP
 

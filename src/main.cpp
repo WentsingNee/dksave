@@ -8,18 +8,18 @@
  *   all rights reserved
  */
 
-#include "logger.hpp"
-#include "ucamera_factory.hpp"
+#include "dksave/logger.hpp"
+#include "dksave/plugins/ucamera_factory.hpp"
 
 #if DKSAVE_ENABLE_K4A
-#	include "ucamera_factories/k4a_camera_factory.hpp"
+#	include "dksave/plugins/k4a/camera_factory.hpp"
 #endif
 
 #if DKSAVE_ENABLE_OB
-#	include "ucamera_factories/ob_camera_factory.hpp"
+#	include "dksave/plugins/ob/camera_factory.hpp"
 #endif
 
-#include "working_status.hpp"
+#include "dksave/working_status.hpp"
 
 #include <chrono>
 #include <iostream>

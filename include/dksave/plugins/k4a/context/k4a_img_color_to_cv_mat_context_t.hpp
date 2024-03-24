@@ -8,8 +8,8 @@
  *   all rights reserved
  */
 
-#ifndef DKSAVE_K4A_IMG_COLOR_TO_CV_MAT_CONTEXT_T_HPP
-#define DKSAVE_K4A_IMG_COLOR_TO_CV_MAT_CONTEXT_T_HPP
+#ifndef DKSAVE_PLUGINS_K4A_CONTEXT_K4A_IMG_COLOR_TO_CV_MAT_CONTEXT_T_HPP
+#define DKSAVE_PLUGINS_K4A_CONTEXT_K4A_IMG_COLOR_TO_CV_MAT_CONTEXT_T_HPP
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
@@ -39,4 +39,4 @@ struct k4a_img_color_to_cv_mat_context_t
 		}
 };
 
-#endif // DKSAVE_K4A_IMG_COLOR_TO_CV_MAT_CONTEXT_T_HPP
+#endif // DKSAVE_PLUGINS_K4A_CONTEXT_K4A_IMG_COLOR_TO_CV_MAT_CONTEXT_T_HPP

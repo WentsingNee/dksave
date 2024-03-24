@@ -10,8 +10,8 @@
  *      Implement of this file partially references the code: [](https://github.com/hirorogithub/ffmpeg_sample-H264_to_cv-Mat)
  */
 
-#ifndef DKSAVE_H264_TO_CV_MAT_CONTEXT_HPP
-#define DKSAVE_H264_TO_CV_MAT_CONTEXT_HPP
+#ifndef DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_HPP
+#define DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_HPP
 
 #include "kerbal/container/vector.hpp"
 
@@ -256,4 +256,4 @@ cv::Mat const & H264_to_cv_mat_context::decode(std::uint8_t *input_buff, size_t 
 	return this->cv_mat;
 }
 
-#endif // DKSAVE_H264_TO_CV_MAT_CONTEXT_HPP
+#endif // DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_HPP

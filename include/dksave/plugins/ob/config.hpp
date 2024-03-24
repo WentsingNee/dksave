@@ -1,5 +1,5 @@
 /**
- * @file       ob_config.hpp
+ * @file       config.hpp
  * @brief
  * @date       2023/10/9
  * @author     Wentsing Nee
@@ -8,9 +8,8 @@
  *   all rights reserved
  */
 
-
-#ifndef DKSAVE_OB_CONFIG_HPP
-#define DKSAVE_OB_CONFIG_HPP
+#ifndef DKSAVE_PLUGINS_OB_CONFIG_HPP
+#define DKSAVE_PLUGINS_OB_CONFIG_HPP
 
 #include <cstring>
 
@@ -157,4 +156,4 @@ struct fmt::formatter<ob::VideoStreamProfile> {
 
 };
 
-#endif // DKSAVE_OB_CONFIG_HPP
+#endif // DKSAVE_PLUGINS_OB_CONFIG_HPP
