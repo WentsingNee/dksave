@@ -114,6 +114,7 @@ class fmt::formatter<k4a_device_configuration_t> {
 				case K4A_IMAGE_FORMAT_COLOR_MJPG: return "MJPG";
 				case K4A_IMAGE_FORMAT_COLOR_NV12: return "NV12";
 				case K4A_IMAGE_FORMAT_COLOR_YUY2: return "YUY2";
+				case K4A_IMAGE_FORMAT_COLOR_BGRA32: return "BGRA32";
 				case K4A_IMAGE_FORMAT_DEPTH16: return "DEPTH16";
 				case K4A_IMAGE_FORMAT_IR16: return "IR16";
 				case K4A_IMAGE_FORMAT_CUSTOM8: return "CUSTOM8";
