@@ -205,8 +205,10 @@ namespace dksave::plugins_ob
 
 	class capture_loop_context
 	{
+		public:
 			dksave::plugins_ob::camera * camera;
 
+		private:
 			std::filesystem::path camera_working_dir;
 
 			std::filesystem::path path_base_color = camera_working_dir / "rgb";
