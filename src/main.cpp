@@ -22,6 +22,7 @@
 
 #include "dksave/plugins/ucamera_factory.hpp"
 
+#include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
 #include "dksave/working_status.hpp"
 
@@ -35,137 +36,16 @@
 
 #include <cstdlib>
 
-#include <ctre.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <kerbal/container/vector.hpp>
 #include <kerbal/utility/tuple.hpp>
 
 
-static std::filesystem::path working_dir;
-static std::chrono::milliseconds sleep_period = 48ms;
-static std::chrono::milliseconds frame_handle_timeout_rgb = 150ms;
-static std::chrono::milliseconds frame_handle_timeout_depth = 150ms;
-
-/**
- * 将 hh:mm:ss 格式的字符串转换为 std::chrono::seconds
- */
-static std::chrono::seconds parse_clock(std::string const & s)
-{
-	constexpr const char CLOCK_PATTERN[] = R"(\d\d:\d\d:\d\d)";
-	if (!ctre::match<CLOCK_PATTERN>(s)) {
-		throw std::runtime_error(fmt::format("wrong clock format. expect format: <hh:mm:ss>, got: \"{}\"", s));
-	}
-
-	int hour = std::stoi(s.substr(0, 2));
-	if (hour < 0 || hour >= 24) {
-		throw std::runtime_error("unreasonable hour in clock");
-	}
-	int min = std::stoi(s.substr(3, 2));
-	if (min < 0 || min >= 60) {
-		throw std::runtime_error("unreasonable minute in clock");
-	}
-	int sec = std::stoi(s.substr(6, 2));
-	if (sec < 0 || sec >= 60) {
-		throw std::runtime_error("unreasonable second in clock");
-	}
-	return std::chrono::hours(hour) + std::chrono::minutes(min) + std::chrono::seconds(sec);
-}
-
-static void parse_global_settings(YAML::Node const & config_node)
-{
-	auto parse_field = [](char const * field, auto parse) {
-		try {
-			parse();
-		} catch (YAML::InvalidNode const & e) {
-			KERBAL_LOG_WRITE(KFATAL, "Parse {} failed. what: {}", field, e.what());
-			throw;
-		} catch (std::exception const & e) {
-			KERBAL_LOG_WRITE(KFATAL, "Parse {} failed. what: {}", field, e.what());
-			throw;
-		}
-	};
-
-	parse_field("working_dir", [&config_node]() {
-		std::string working_dir_str;
-		working_dir_str = config_node["working_dir"].as<std::string>();
-		working_dir = std::filesystem::path(working_dir_str);
-		KERBAL_LOG_WRITE(KINFO, "Parse working_dir success. working_dir: {}", working_dir_str);
-	});
-
-	parse_field("sleep_period", [&config_node]() {
-		int sleep_period_i = config_node["sleep_period"].as<int>();
-		sleep_period = std::chrono::milliseconds(sleep_period_i);
-		KERBAL_LOG_WRITE(KINFO, "Parse sleep_period success. sleep_period: {} ms", sleep_period.count());
-	});
-
-	parse_field("start_time", [&config_node]() {
-		std::string s = config_node["start_time"].as<std::string>();
-		start_time = parse_clock(s);
-		KERBAL_LOG_WRITE(KINFO, "Parse start_time success. start_time: {}", s);
-	});
-
-	parse_field("end_time", [&config_node]() {
-		std::string s = config_node["end_time"].as<std::string>();
-		end_time = parse_clock(s);
-		KERBAL_LOG_WRITE(KINFO, "Parse end_time success. end_time: {}", s);
-	});
-
-
-	YAML::Node frame_handle_timeout_node = config_node["frame_handle_timeout"];
-
-	parse_field("frame_handle_timeout.rgb", [&frame_handle_timeout_node]() {
-		int frame_handle_timeout_rgb = frame_handle_timeout_node["rgb"].as<int>();
-		::frame_handle_timeout_rgb = std::chrono::milliseconds(frame_handle_timeout_rgb);
-		KERBAL_LOG_WRITE(KINFO, "Parse frame_handle_timeout.rgb success. frame_handle_timeout.rgb: {}", frame_handle_timeout_rgb);
-	});
-
-	parse_field("frame_handle_timeout.depth", [&frame_handle_timeout_node]() {
-		int frame_handle_timeout_depth = frame_handle_timeout_node["depth"].as<int>();
-		::frame_handle_timeout_depth = std::chrono::milliseconds(frame_handle_timeout_depth);
-		KERBAL_LOG_WRITE(KINFO, "Parse frame_handle_timeout.depth success. frame_handle_timeout.depth: {}", frame_handle_timeout_depth);
-	});
-
-	parse_field("log_level", [&config_node]() {
-		std::string s = config_node["log_level"].as<std::string>();
-		KERBAL_LOG_WRITE(KINFO, "Parse log_level success. log_level: {}", s);
-
-		if (s == "KDEBUG") {
-			kerbal::log::set_log_level(KDEBUG);
-			return;
-		}
-		if (s == "KVERBOSE") {
-			kerbal::log::set_log_level(KVERBOSE);
-			return;
-		}
-		if (s == "KINFO") {
-			kerbal::log::set_log_level(KINFO);
-			return;
-		}
-		if (s == "KWARNING") {
-			kerbal::log::set_log_level(KWARNING);
-			return;
-		}
-		if (s == "KERROR") {
-			kerbal::log::set_log_level(KERROR);
-			return;
-		}
-		if (s == "KFATAL") {
-			kerbal::log::set_log_level(KFATAL);
-			return;
-		}
-
-		KERBAL_LOG_WRITE(KFATAL, "Unknown log level. log_level: {}", s);
-		throw std::runtime_error("Unknown log level");
-	});
-
-}
-
-
 template <dksave::ucamera Camera_t>
 void per_camera_working_thread(Camera_t & camera)
 {
-	typename Camera_t::capture_loop_context ctx(&camera, working_dir);
+	typename Camera_t::capture_loop_context ctx(&camera, dksave::global_settings::get_working_dir());
 	while (true) {
 		using namespace std::chrono_literals;
 
@@ -252,7 +132,7 @@ void per_camera_working_thread(Camera_t & camera)
 			auto handle_rgb_end = std::chrono::system_clock::now();
 			auto handle_rgb_cost = std::chrono::duration_cast<std::chrono::milliseconds>(handle_rgb_end - handle_rgb_start);
 			auto handle_rgb_cost_in_milli = handle_rgb_cost.count();
-			if (handle_rgb_cost_in_milli > frame_handle_timeout_rgb.count()) {
+			if (handle_rgb_cost_in_milli > dksave::global_settings::get_frame_handle_timeout_rgb().count()) {
 				KERBAL_LOG_WRITE(KWARNING, "Handling rgb takes time: {} ms, frame cnt: {}", handle_rgb_cost_in_milli, ctx.frame_count);
 			} else {
 				KERBAL_LOG_WRITE(KVERBOSE, "Handling rgb takes time: {} ms, frame cnt: {}", handle_rgb_cost_in_milli, ctx.frame_count);
@@ -287,7 +167,7 @@ void per_camera_working_thread(Camera_t & camera)
 			auto handle_depth_end = std::chrono::system_clock::now();
 			auto handle_depth_cost = std::chrono::duration_cast<std::chrono::milliseconds>(handle_depth_end - handle_depth_start);
 			auto handle_depth_cost_in_milli = handle_depth_cost.count();
-			if (handle_depth_cost_in_milli > frame_handle_timeout_depth.count()) {
+			if (handle_depth_cost_in_milli > dksave::global_settings::get_frame_handle_timeout_depth().count()) {
 				KERBAL_LOG_WRITE(KWARNING, "Handling depth takes time: {} ms, frame cnt: {}", handle_depth_cost_in_milli, ctx.frame_count);
 			} else {
 				KERBAL_LOG_WRITE(KVERBOSE, "Handling depth takes time: {} ms, frame cnt: {}", handle_depth_cost_in_milli, ctx.frame_count);
@@ -305,7 +185,7 @@ void per_camera_working_thread(Camera_t & camera)
 			KERBAL_LOG_WRITE(KERROR, "Handled exception of capture. camera: {}, exception type: unknown",
 							 camera.device_name());
 		}
-		std::this_thread::sleep_until(start_time + sleep_period);
+		std::this_thread::sleep_until(start_time + dksave::global_settings::get_sleep_period());
 	}
 }
 
@@ -351,7 +231,7 @@ int main(int argc, char * argv[]) try
 	}
 
 	YAML::Node config_node = yaml_root_node["config"];
-	parse_global_settings(config_node);
+	dksave::global_settings::parse(config_node);
 
 	dksave::ucamera_factories<
 		0
