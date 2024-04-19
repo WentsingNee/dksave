@@ -1,23 +1,23 @@
 {
   "name": "dksave",
-  "version-string": "2024.2.1",
-  "builtin-baseline": "0719a71389654b88d827501d88e37e58ea8cbd70",
+  "version-string": "2024.9.1",
+  "builtin-baseline": "91d888703f251c13111c1b889be1f350c4ceb7ab",
   "dependencies": [
     {
       "name": "ctre",
-      "version>=": "3.8.1"
+      "version>=": "3.9.0"
     },
     {
       "name": "fmt",
-      "version>=": "10.2.1"
+      "version>=": "11.0.2"
     },
     {
       "name": "kerbal",
-      "version>=": "2024.2.1"
+      "version>=": "2024.8.1"
     },
     {
       "name": "opencv4",
-      "version>=": "4.8.0#15"
+      "version>=": "4.8.0#22"
     },
     {
       "name": "yaml-cpp",
@@ -39,7 +39,7 @@
       "dependencies": [
         {
           "name": "ffmpeg",
-          "version>=": "6.1.1#2"
+          "version>=": "7.0.2#4"
         }
       ]
     },
@@ -48,7 +48,7 @@
       "dependencies": [
         {
           "name": "pcl",
-          "version>=": "1.14.0#2"
+          "version>=": "1.14.1#1"
         }
       ]
     }
