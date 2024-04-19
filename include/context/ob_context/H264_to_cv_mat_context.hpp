@@ -22,15 +22,11 @@
 
 // Opencv
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/objdetect.hpp>
 
 extern "C" {
 #include <libswscale/swscale.h>
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 };
 
