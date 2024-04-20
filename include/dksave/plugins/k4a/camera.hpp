@@ -71,11 +71,61 @@ namespace dksave::plugins_k4a
 				return k_config;
 			}
 
+			void print_intrinsic() const
+			{
+				k4a_calibration_camera_t calib = this->k_device.get_calibration(
+					this->k_config.depth_mode,
+					this->k_config.color_resolution
+				).depth_camera_calibration;
+
+				auto s =
+					fmt::format("device: {}\n", this->k_device.get_serialnum()) +
+					fmt::format("resolution:\n"
+								"    width: {}, height: {}\n",
+								calib.resolution_width,
+								calib.resolution_height
+					) +
+					fmt::format("principal point:\n"
+								"    x: {}\n"
+								"    y: {}\n",
+								calib.intrinsics.parameters.param.cx,
+								calib.intrinsics.parameters.param.cy
+					) +
+					fmt::format("focal length:\n"
+								"    x: {}\n"
+								"    y: {}\n",
+								calib.intrinsics.parameters.param.fx,
+								calib.intrinsics.parameters.param.fy
+					) +
+					fmt::format("radial distortion coefficients:\n") +
+					fmt::format("    k1: {}\n", calib.intrinsics.parameters.param.k1) +
+					fmt::format("    k2: {}\n", calib.intrinsics.parameters.param.k2) +
+					fmt::format("    k3: {}\n", calib.intrinsics.parameters.param.k3) +
+					fmt::format("    k4: {}\n", calib.intrinsics.parameters.param.k4) +
+					fmt::format("    k5: {}\n", calib.intrinsics.parameters.param.k5) +
+					fmt::format("    k6: {}\n", calib.intrinsics.parameters.param.k6) +
+					fmt::format("center of distortion in Z=1 plane\n"
+								"    x: {}\n"
+								"    y: {}\n",
+								calib.intrinsics.parameters.param.codx,
+								calib.intrinsics.parameters.param.cody
+					) +
+					fmt::format("tangential distortion coefficient\n"
+								"    x: {}\n"
+								"    y: {}\n",
+								calib.intrinsics.parameters.param.p1,
+								calib.intrinsics.parameters.param.p2
+					) +
+					fmt::format("metric radius: {}\n", calib.intrinsics.parameters.param.metric_radius);
+				KERBAL_LOG_WRITE(KINFO, "intrinsic:\n{}", s);
+			}
+
 			void start() try
 			{
 				k_device.start_cameras(&k_config);
 				k_enable = true;
 				KERBAL_LOG_WRITE(KINFO, "Start camera {}.", k_device_name);
+				this->print_intrinsic();
 			} catch (...) {
 				k_enable = false;
 				throw;

@@ -119,10 +119,70 @@ namespace dksave::plugins_ob
 				return k_device;
 			}
 
+			void print_intrinsic() const
+			{
+				auto calib = this->k_device->getCalibrationCameraParamList();
+				auto paramGroupCount = calib->count();
+				auto s =
+					fmt::format("device: {}\n", this->k_device->getDeviceInfo()->serialNumber())
+				;
+
+				for (auto i = 0u; i < paramGroupCount; ++i) {
+					auto cameraParam = calib->getCameraParam(i);
+					auto rgbIntrinsic = cameraParam.rgbIntrinsic;
+					auto rgbDistortion = cameraParam.rgbDistortion;
+					auto depthIntrinsic = cameraParam.depthIntrinsic;
+					auto depthDistortion = cameraParam.depthDistortion;
+					auto transform = cameraParam.transform;
+
+					s +=
+						fmt::format("the {}-st param:\n", i) +
+						fmt::format("	isMirrored: {}\n", cameraParam.isMirrored) +
+						fmt::format("	rgbIntrinsic:\n") +
+						fmt::format("		fx: {}\n", rgbIntrinsic.fx) +
+						fmt::format("		fy: {}\n", rgbIntrinsic.fy) +
+						fmt::format("		cx: {}\n", rgbIntrinsic.cx) +
+						fmt::format("		cy: {}\n", rgbIntrinsic.cy) +
+						fmt::format("		width: {}\n", rgbIntrinsic.width) +
+						fmt::format("		height: {}\n", rgbIntrinsic.height) +
+						fmt::format("	rgbDistortion:\n") +
+						fmt::format("		k1: {}\n", rgbDistortion.k1) +
+						fmt::format("		k2: {}\n", rgbDistortion.k2) +
+						fmt::format("		k3: {}\n", rgbDistortion.k3) +
+						fmt::format("		k4: {}\n", rgbDistortion.k4) +
+						fmt::format("		k5: {}\n", rgbDistortion.k5) +
+						fmt::format("		k6: {}\n", rgbDistortion.k6) +
+						fmt::format("		p1: {}\n", rgbDistortion.p1) +
+						fmt::format("		p2: {}\n", rgbDistortion.p2) +
+						fmt::format("	depthIntrinsic:\n") +
+						fmt::format("		fx: {}\n", depthIntrinsic.fx) +
+						fmt::format("		fy: {}\n", depthIntrinsic.fy) +
+						fmt::format("		cx: {}\n", depthIntrinsic.cx) +
+						fmt::format("		cy: {}\n", depthIntrinsic.cy) +
+						fmt::format("		width: {}\n", depthIntrinsic.width) +
+						fmt::format("		height: {}\n", depthIntrinsic.height) +
+						fmt::format("	depthDistortion:\n") +
+						fmt::format("		k1: {}\n", depthDistortion.k1) +
+						fmt::format("		k2: {}\n", depthDistortion.k2) +
+						fmt::format("		k3: {}\n", depthDistortion.k3) +
+						fmt::format("		k4: {}\n", depthDistortion.k4) +
+						fmt::format("		k5: {}\n", depthDistortion.k5) +
+						fmt::format("		k6: {}\n", depthDistortion.k6) +
+						fmt::format("		p1: {}\n", depthDistortion.p1) +
+						fmt::format("		p2: {}\n", depthDistortion.p2) +
+						fmt::format("	transform:\n") +
+						fmt::format("		rot: {}\n", transform.rot) +
+						fmt::format("		trans: {}\n", transform.trans)
+					;
+				}
+				KERBAL_LOG_WRITE(KINFO, "intrinsic:\n{}", s);
+			}
+
 			void start()
 			{
 				pipeline->start(config);
 				this->k_enable = true;
+				this->print_intrinsic();
 			}
 
 			void stabilize()
