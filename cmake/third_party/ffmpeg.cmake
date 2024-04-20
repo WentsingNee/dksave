@@ -10,5 +10,14 @@ if (DKSAVE_ENABLE_OB)
 
     target_include_directories(dksave PRIVATE ${FFMPEG_INCLUDE_DIRS})
     target_link_directories(dksave PRIVATE ${FFMPEG_LIBRARY_DIRS})
-    target_link_libraries(dksave PRIVATE ${FFMPEG_LIBRARIES})
+#    target_link_libraries(dksave PRIVATE ${FFMPEG_LIBRARIES})
+    target_link_libraries(dksave PRIVATE
+#            avdevice
+#            avfilter
+#            avformat
+            avcodec
+            swresample
+            swscale
+            avutil
+    )
 endif ()
