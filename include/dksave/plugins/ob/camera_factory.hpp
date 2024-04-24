@@ -241,10 +241,10 @@ namespace dksave_ob {
 		void open_network_cameras() {
 			YAML::Node network_cameras_node = cameras_node["network"];
 			for (auto const &e: network_cameras_node) {
-				auto const &k = e.first;
+				auto const &device_ip_node = e.first;
 				auto const &v = e.second;
 
-				std::string device_ip = k.as<std::string>();
+				std::string device_ip = device_ip_node.as<std::string>();
 				int port = 8090;
 
 				KERBAL_LOG_WRITE(KINFO, "Creating network camera. device_ip: {}, port: {}", device_ip, port);
