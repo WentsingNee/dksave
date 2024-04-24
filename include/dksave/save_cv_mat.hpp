@@ -29,14 +29,23 @@ namespace dksave
 	inline
 	void save_cv_mat(cv::Mat const & mat, std::filesystem::path const & path, std::vector<int> const & params = {})
 	{
-		std::filesystem::create_directories(path.parent_path());
+		std::filesystem::path dir(path.parent_path());
+		try {
+			std::filesystem::create_directories(dir);
+		} catch (std::exception const & e) {
+			KERBAL_LOG_WRITE(KERROR, "Create directory failed. directory: {}, exception_type: {}, what: {}",
+							 dir.string(), typeid(e).name(), e.what()
+			);
+			throw;
+		}
 
 		bool write_success = cv::imwrite(path.string(), mat, params);
 		if (!write_success) {
-			throw std::runtime_error("Save failed.");
+			KERBAL_LOG_WRITE(KERROR, "Image saved failed. path: {}", dir.string());
+			throw std::runtime_error("Image saved failed");
 		}
 
-		KERBAL_LOG_WRITE(KVERBOSE, "Saved {}", path.string());
+		KERBAL_LOG_WRITE(KVERBOSE, "Image saved. path: {}", path.string());
 	}
 
 } // namespace dksave
