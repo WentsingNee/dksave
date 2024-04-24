@@ -237,7 +237,13 @@ namespace dksave::plugins_ob
 
 			void stabilize()
 			{
-
+				for (int i = 0; i < 30; ++i) {
+					auto frame_set = this->pipeline->waitForFrames(2000);
+					if (frame_set == nullptr) {
+						KERBAL_LOG_WRITE(KERROR, "Get capture failed. camera: {}", this->device_name());
+						throw std::runtime_error("Get capture failed");
+					}
+				}
 			}
 
 			void stop() noexcept try
