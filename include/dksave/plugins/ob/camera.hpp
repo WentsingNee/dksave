@@ -23,6 +23,8 @@
 #include <string>
 #include <filesystem>
 
+#include <cstdlib>
+
 #include <libobsensor/ObSensor.hpp>
 #include <opencv2/core.hpp>
 #include <fmt/format.h>
@@ -80,11 +82,10 @@ namespace dksave::plugins_ob
 					);
 				} catch (ob::Error const & e) {
 					KERBAL_LOG_WRITE(
-						KERROR, "Profile not supported. camera: {}, config: {}, what: {}",
-						this->device_name(),
-						dksave_config,
-						e.getMessage()
+						KFATAL, "Profile not supported. camera: {}, config: {}, what: {}",
+						this->device_name(), dksave_config, e.getMessage()
 					);
+					exit(EXIT_FAILURE);
 				}
 				if (profile) {
 					config->enableStream(profile);
@@ -313,16 +314,16 @@ namespace dksave::plugins_ob
 				auto color_frame = frame_set->colorFrame();
 				if (color_frame == nullptr) {
 					KERBAL_LOG_WRITE(KERROR, "Get color frame failed. camera: {}", camera->device_name());
-					return;
+					throw std::runtime_error("OB get color frame failed.");
 				}
 				KERBAL_LOG_WRITE(
-					KDEBUG, "Get color frame success. camera: {}, format: {}",
-					camera->device_name(),
-					color_frame->format()
+					KVERBOSE, "Get color frame success. camera: {}",
+					camera->device_name()
 				);
 
 				cv::Mat const * color_mat = nullptr;
-				switch (color_frame->format()) {
+				OBFormat color_format = color_frame->format();
+				switch (color_format) {
 					case OB_FORMAT_H264: {
 						KERBAL_LOG_WRITE(
 							KDEBUG, "Color frame dataSize: {}",
@@ -333,7 +334,7 @@ namespace dksave::plugins_ob
 							color_frame->dataSize()
 						);
 						KERBAL_LOG_WRITE(
-							KDEBUG, "Decode color frame from H.264 success. camera: {}",
+							KVERBOSE, "Decode color frame from H.264 success. camera: {}",
 							camera->device_name()
 						);
 						break;
@@ -341,27 +342,43 @@ namespace dksave::plugins_ob
 					case OB_FORMAT_RGB: {
 						color_mat = &rgb_context.cast(color_frame);
 						KERBAL_LOG_WRITE(
-							KDEBUG, "Convert ob::Frame to cv::Mat success. camera: {}",
+							KVERBOSE, "Convert ob::Frame to cv::Mat success. camera: {}",
 							camera->device_name()
 						);
 						break;
 					}
+					default: {
+						KERBAL_LOG_WRITE(
+							KERROR, "Unexpected OB_FORMAT. camera: {}, format: {}",
+							camera->device_name(), color_format
+						);
+						throw std::runtime_error("Unexpected OB_FORMAT.");
+					}
 				}
 				if (nullptr == color_mat) {
 					KERBAL_LOG_WRITE(
-						KDEBUG, "color_mat is null. camera: {}",
+						KERROR, "color_mat is null. camera: {}",
 						camera->device_name()
 					);
-					return;
+					throw std::runtime_error("color_mat is null.");
 				}
 				try {
 					save_cv_mat(*color_mat, filename_rgb);
+				} catch (std::exception const & e) {
+					KERBAL_LOG_WRITE(
+						KERROR, "Color image saved failed. camera: {}, filename_rgb: {}, exception type: {}, what: {}",
+						camera->device_name(),
+						filename_rgb.string(),
+						typeid(e).name(), e.what()
+					);
+					throw;
 				} catch (...) {
 					KERBAL_LOG_WRITE(
-						KERROR, "Color image saved failed. camera: {}, filename_rgb: {}",
+						KERROR, "Color image saved failed. camera: {}, filename_rgb: {}, exception type: unknown",
 						camera->device_name(),
 						filename_rgb.string()
 					);
+					throw;
 				}
 			}
 
@@ -379,7 +396,7 @@ namespace dksave::plugins_ob
 					return;
 				}
 				KERBAL_LOG_WRITE(
-					KDEBUG, "Get depth frame success. camera: {}, format: {}",
+					KVERBOSE, "Get depth frame success. camera: {}, depth_frame.format: {}",
 					camera->device_name(),
 					depth_frame->format()
 				);
@@ -392,12 +409,21 @@ namespace dksave::plugins_ob
 				);
 				try {
 					save_cv_mat(depth_mat, filename_depth);
+				} catch (std::exception const & e) {
+					KERBAL_LOG_WRITE(
+						KERROR, "Depth image saved failed. camera: {}, filename_rgb: {}, exception type: {}, what: {}",
+						camera->device_name(),
+						filename_depth.string(),
+						typeid(e).name(), e.what()
+					);
+					throw;
 				} catch (...) {
 					KERBAL_LOG_WRITE(
-						KERROR, "Depth image saved failed. camera: {}, filename_depth: {}",
+						KERROR, "Depth image saved failed. camera: {}, filename_depth: {}, exception type: unknown",
 						camera->device_name(),
 						filename_depth.string()
 					);
+					throw;
 				}
 			}
 
