@@ -247,9 +247,18 @@ namespace dksave::plugins_k4a
 				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(k4a_img_color);
 				try {
 					save_cv_mat(cv_color_img_without_alpha, filename_color);
+				} catch (std::exception const & e) {
+					KERBAL_LOG_WRITE(KERROR, "RGB image saved failed. camera: {}, filename: {}, exception_type: {}, what: {}",
+									 camera->device_name(),
+									 filename_color.string(),
+									 typeid(e).name(),
+									 e.what()
+					);
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: color image saved failed: {}", camera->device_name(),
-									 filename_color.string());
+					KERBAL_LOG_WRITE(KERROR, "RGB image saved failed. camera: {}, filename: {}, exception_type: unknown",
+									 camera->device_name(),
+									 filename_color.string()
+					);
 				}
 			}
 
@@ -267,9 +276,17 @@ namespace dksave::plugins_k4a
 				try {
 					k4a_img_depth_transformed_to_color = &k4a_img_depth_transform_to_color_mode_context.transform(
 						transformation, k4a_img_depth);
+				} catch (std::exception const & e) {
+					KERBAL_LOG_WRITE(KERROR, "Depth image transformation to color failed. camera: {}, exception_type: {}, what: {}",
+									 camera->device_name(),
+									 typeid(e).name(),
+									 e.what()
+					);
+					return;
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image transformation to color failed",
-									 camera->device_name());
+					KERBAL_LOG_WRITE(KERROR, "Depth image transformation to color failed. camera: {}, exception_type: unknown",
+									 camera->device_name()
+					);
 					return;
 				}
 
@@ -277,9 +294,18 @@ namespace dksave::plugins_k4a
 					*k4a_img_depth_transformed_to_color);
 				try {
 					save_cv_mat(cv_depth_img, filename_depth);
+				} catch (std::exception const & e) {
+					KERBAL_LOG_WRITE(KERROR, "Depth image saved failed. camera: {}, filename: {}, exception_type: {}, what: {}",
+									 camera->device_name(),
+									 filename_depth.string(),
+									 typeid(e).name(),
+									 e.what()
+					);
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth image saved failed: {}", camera->device_name(),
-									 filename_depth.string());
+					KERBAL_LOG_WRITE(KERROR, "Depth image saved failed. camera: {}, filename: {}, exception_type: unknown",
+									 camera->device_name(),
+									 filename_depth.string()
+					);
 				}
 
 #if DKSAVE_ENABLE_PCL
