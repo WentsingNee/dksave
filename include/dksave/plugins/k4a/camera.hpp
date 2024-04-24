@@ -21,6 +21,7 @@
 #include "dksave/save_cv_mat.hpp"
 #include "dksave/plugins/ucamera.hpp"
 
+#include <chrono>
 #include <string>
 #include <filesystem>
 
@@ -228,10 +229,15 @@ namespace dksave::plugins_k4a
 		public:
 			void do_capture()
 			{
+				using namespace std::chrono_literals;
 				try {
-					camera->device().get_capture(&capture);
+					bool ret = camera->device().get_capture(&capture, 1s);
+					if (false == ret) {
+						KERBAL_LOG_WRITE(KERROR, "Get capture timeout. camera: {}", camera->device_name());
+						throw std::runtime_error("Get capture timeout");
+					}
 				} catch (...) {
-					KERBAL_LOG_WRITE(KERROR, "Camera {}: Get capture failed!", camera->device_name());
+					KERBAL_LOG_WRITE(KERROR, "Get capture failed. camera: {}", camera->device_name());
 					throw;
 				}
 			}
