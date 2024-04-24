@@ -312,6 +312,7 @@ void per_camera_working_thread(Camera_t & camera)
 
 int main(int argc, char * argv[]) try
 {
+	std::cout << fmt::format("Built time: {}-{}", __DATE__, __TIME__) << std::endl;
 	if (argc < 2) {
 		std::cerr << fmt::format("Usage: {} config.yaml", argv[0]) << std::endl;
 		exit(EXIT_FAILURE);
