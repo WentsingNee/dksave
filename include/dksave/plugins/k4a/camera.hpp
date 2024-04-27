@@ -131,42 +131,41 @@ namespace dksave::plugins_k4a
 			}
 
 			// 稳定化
-			void stabilize() try
+			void stabilize(int failed_total = 10, int success_total = 30) try
 			{
 				k4a::capture capture;
-				int success = 0; //用来稳定，类似自动曝光
-				int failed = 0; // 统计自动曝光的失败次数
+				int success = 0;
+				int failed = 0;
 
 				while (true) {
 					bool capture_success = true;
 					try {
-						capture_success = k_device.get_capture(&capture);
+						KERBAL_LOG_WRITE(KINFO, "Capture in stabilization start. camera: {}", k_device_name);
+						capture_success = k_device.get_capture(&capture, 1s); // return false when timeout
 					} catch (...) {
 						capture_success = false;
 					}
 
 					if (capture_success) {
-						// 跳过前 n 个（成功的数据采集）循环，用来稳定
 						success++;
-						KERBAL_LOG_WRITE(KINFO, "Capture several frames to give auto-exposure for {} times.", success);
+						KERBAL_LOG_WRITE(KINFO, "Capture in stabilization success ({}/{}). camera: {}", success, success_total, k_device_name);
 
-						if (success >= 30) {
-							KERBAL_LOG_WRITE(KINFO, "Done: auto-exposure.");
-							return; // 完成相机的稳定过程
+						if (success >= success_total) {
+							KERBAL_LOG_WRITE(KINFO, "Stabilization success. camera: {}", k_device_name);
+							return;
 						}
 					} else {
 						failed++;
-						KERBAL_LOG_WRITE(KWARNING, "K4A_WAIT_RESULT_TIMEOUT for {} times.", failed);
+						KERBAL_LOG_WRITE(KWARNING, "Capture in stabilization failed ({}/{}). camera: {}", failed, failed_total, k_device_name);
 
-						if (failed >= 30) {
-							KERBAL_LOG_WRITE(KERROR, "Failed to give auto-exposure.", failed);
-							this->stop();
-							return;
+						if (failed >= failed_total) {
+							throw std::runtime_error("k4a stable failed");
 						}
 					}
 				}
 			} catch (...) {
-				k_enable = false;
+				KERBAL_LOG_WRITE(KERROR, "Stabilization failed, stop the camera. camera: {}", k_device_name);
+				this->stop();
 				throw;
 			}
 
