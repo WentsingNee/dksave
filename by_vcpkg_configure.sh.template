@@ -1,0 +1,6 @@
+
+
+cmake ../ --fresh -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE=/home/peter/open-source/git/vcpkg/scripts/buildsystems/vcpkg.cmake \
+  -DDKSAVE_ENABLE_K4A=ON -DDKSAVE_ENABLE_OB=OFF
+
