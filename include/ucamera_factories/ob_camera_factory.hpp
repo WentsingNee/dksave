@@ -230,7 +230,7 @@ namespace dksave_ob {
 				KERBAL_LOG_WRITE(KINFO, "Serial number of camara is fetched. deployment: {}, serial_num: {}", "local", serial_num);
 
 				YAML::Node camera_node = local_cameras_node[serial_num];
-				if (camera_node.IsNull()) {
+				if (!camera_node.IsDefined()) {
 					KERBAL_LOG_WRITE(KERROR,
 									 "Configuration of the camera is not specified, this camera will be ignored. deployment: {}, serial_num: {}",
 									 "local", serial_num);
