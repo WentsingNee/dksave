@@ -350,10 +350,6 @@ void per_camera_working_thread(Camera_t & camera)
 int main(int argc, char * argv[]) try
 {
 	std::cout << fmt::format("Built time: {}-{}", __DATE__, __TIME__) << std::endl;
-	if (argc < 2) {
-		std::cerr << fmt::format("Usage: {} config.yaml", argv[0]) << std::endl;
-		exit(EXIT_FAILURE);
-	}
 
 #if DKSAVE_ENABLE_K4A
 	std::cout << fmt::format("DKSAVE_ENABLE_K4A: {}", true) << std::endl;
@@ -366,6 +362,11 @@ int main(int argc, char * argv[]) try
 #else
 	std::cout << fmt::format("DKSAVE_ENABLE_OB: {}", false) << std::endl;
 #endif
+
+	if (argc < 2) {
+		std::cerr << fmt::format("Usage: {} config.yaml", argv[0]) << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
 
 	std::filesystem::path config_yaml_path = argv[1];
