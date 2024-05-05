@@ -15,6 +15,7 @@
 #include "config.hpp"
 
 #include "dksave/plugins/ucamera_factory.hpp"
+#include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
 
 #include <string>
@@ -24,7 +25,6 @@
 #include <k4a/k4a.hpp>
 #include <yaml-cpp/yaml.h>
 
-#include <kerbal/container/avl_set.hpp>
 #include <kerbal/container/vector.hpp>
 
 
@@ -76,7 +76,6 @@ namespace dksave::plugins_k4a
 
 				YAML::Node cameras_node = yaml_config["k4a_cameras"];
 				kerbal::container::vector<camera> cameras;
-				kerbal::container::avl_set<std::string> device_name_used;
 				cameras.reserve(device_count);
 
 				for (uint32_t i = 0; i < device_count; ++i) {
@@ -109,7 +108,7 @@ namespace dksave::plugins_k4a
 							exit(EXIT_FAILURE);
 						}
 
-						auto uir = device_name_used.insert(device_name);
+						auto uir = dksave::global_settings::add_device_name_occupied(device_name);
 						if (!uir.insert_happen()) {
 							KERBAL_LOG_WRITE(KFATAL, "device_name: {} has been occupied.", device_name);
 							exit(EXIT_FAILURE);

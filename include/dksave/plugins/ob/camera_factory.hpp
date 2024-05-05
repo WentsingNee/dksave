@@ -15,6 +15,7 @@
 #include "camera.hpp"
 
 #include "dksave/plugins/ucamera_factory.hpp"
+#include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
 
 #include <string>
@@ -25,7 +26,6 @@
 #include <libobsensor/ObSensor.hpp>
 #include <yaml-cpp/yaml.h>
 
-#include <kerbal/container/avl_set.hpp>
 #include <kerbal/container/vector.hpp>
 
 
@@ -35,7 +35,6 @@ namespace dksave::plugins_ob
 	struct find_cameras_context
 	{
 			kerbal::container::vector<dksave::plugins_ob::camera> cameras;
-			kerbal::container::avl_set<std::string> device_name_used;
 			YAML::Node cameras_node;
 
 			ob::Context ctx;
@@ -180,7 +179,7 @@ namespace dksave::plugins_ob
 									 deployment, label, device_name);
 				}
 
-				auto uir = device_name_used.insert(device_name);
+				auto uir = dksave::global_settings::add_device_name_occupied(device_name);
 				if (!uir.insert_happen()) {
 					KERBAL_LOG_WRITE(KFATAL, "Specified device_name has been occupied. device_name: {}", device_name);
 					exit(EXIT_FAILURE);

@@ -19,6 +19,7 @@
 #include <string>
 
 #include <ctre.hpp>
+#include <kerbal/container/avl_set.hpp>
 #include <yaml-cpp/yaml.h>
 
 
@@ -33,6 +34,7 @@ namespace dksave
 			static inline std::chrono::milliseconds sleep_period = 48ms;
 			static inline std::chrono::milliseconds frame_handle_timeout_rgb = 150ms;
 			static inline std::chrono::milliseconds frame_handle_timeout_depth = 150ms;
+			static inline kerbal::container::avl_set<std::string> device_name_occupied;
 
 		public:
 			static
@@ -57,6 +59,12 @@ namespace dksave
 			auto const & get_frame_handle_timeout_depth()
 			{
 				return frame_handle_timeout_depth;
+			}
+
+			static
+			auto add_device_name_occupied(std::string const & name)
+			{
+				return device_name_occupied.insert(name);
 			}
 
 		private:
