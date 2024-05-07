@@ -48,11 +48,16 @@ namespace dksave
 
 
 	template <typename Context>
-	concept capture_loop_context = requires(Context & context, std::string const & date, std::string const & timestamp)
+	concept capture_loop_context = requires(
+		Context & context,
+		std::filesystem::path const & filename_color,
+		std::filesystem::path const & filename_depth,
+		std::filesystem::path const & filename_pcloud
+	)
 	{
 		{ context.do_capture() };
-		{ context.handle_color(date, timestamp) };
-		{ context.handle_depth(date, timestamp) };
+		{ context.handle_color(filename_color) };
+		{ context.handle_depth(filename_depth, filename_pcloud) };
 	};
 
 	template <typename Camera>

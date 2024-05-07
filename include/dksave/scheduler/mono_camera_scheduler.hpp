@@ -41,7 +41,7 @@ namespace dksave
 
 		public:
 			mono_camera_scheduler(Camera_t & camera) :
-				ctx(&camera, dksave::global_settings::get_working_dir())
+				ctx(&camera)
 			{
 			}
 
