@@ -189,12 +189,6 @@ namespace dksave::plugins_k4a
 			dksave::plugins_k4a::camera * camera;
 
 		private:
-			std::filesystem::path camera_working_dir;
-
-			std::filesystem::path path_base_color = camera_working_dir / "rgb";
-			std::filesystem::path path_base_depth = camera_working_dir / "depth";
-			std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
-
 			k4a_img_color_to_cv_mat_context_t k4a_img_color_to_cv_mat_context;
 			k4a_img_depth_transform_to_color_mode_context_t k4a_img_depth_transform_to_color_mode_context;
 			k4a_img_depth_to_cv_mat_context_t k4a_img_to_cv_mat_depth_context;
@@ -211,9 +205,8 @@ namespace dksave::plugins_k4a
 			int frame_count = 0;
 
 		public:
-			capture_loop_context(class camera * camera, std::filesystem::path const & working_dir) :
+			capture_loop_context(class camera * camera) :
 				camera(camera),
-				camera_working_dir(working_dir / this->camera->device_name()),
 				transformation(
 					camera->device().get_calibration(
 						camera->config().depth_mode,
@@ -245,7 +238,7 @@ namespace dksave::plugins_k4a
 				}
 			}
 
-			void handle_color(std::string const & date, std::string const & timestamp)
+			void handle_color(std::filesystem::path const & filename_color)
 			{
 				if (!capture) {
 					return;
@@ -254,7 +247,6 @@ namespace dksave::plugins_k4a
 				k4a::image k4a_img_color = capture.get_color_image();
 
 				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(k4a_img_color);
-				std::filesystem::path filename_color = path_base_color / date / (timestamp + ".png");
 				try {
 					save_cv_mat(cv_color_img_without_alpha, filename_color);
 				} catch (...) {
@@ -263,7 +255,10 @@ namespace dksave::plugins_k4a
 				}
 			}
 
-			void handle_depth(std::string const & date, std::string const & timestamp)
+			void handle_depth(
+				std::filesystem::path const & filename_depth,
+				std::filesystem::path const & filename_pcloud
+			)
 			{
 				if (!capture) {
 					return;
@@ -282,7 +277,6 @@ namespace dksave::plugins_k4a
 
 				const cv::Mat & cv_depth_img = k4a_img_to_cv_mat_depth_context.convert(
 					*k4a_img_depth_transformed_to_color);
-				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
 				try {
 					save_cv_mat(cv_depth_img, filename_depth);
 				} catch (...) {
@@ -293,11 +287,10 @@ namespace dksave::plugins_k4a
 #if DKSAVE_ENABLE_PCL
 				const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed_to_color);
 				const pcl::PointCloud<pcl::PointXYZ> & pcl_point_cloud = k4a_img_point_cloud_to_pcl_point_cloud_context.convert(k4a_img_point_cloud);
-				std::filesystem::path filename_clouds = path_base_depth_clouds / date / (timestamp + ".ply");
 				try {
-					std::filesystem::create_directories(filename_clouds.parent_path());
-					pcl::io::savePLYFile(filename_clouds.string(), pcl_point_cloud);
-					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_clouds.string());
+					std::filesystem::create_directories(filename_pcloud.parent_path());
+					pcl::io::savePLYFile(filename_pcloud.string(), pcl_point_cloud);
+					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_pcloud.string());
 				} catch (...) {
 					KERBAL_LOG_WRITE(KERROR, "Camera {}: depth clouds saved failed: {}", camera->device_name(), filename_depth.string());
 				}

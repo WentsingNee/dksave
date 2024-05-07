@@ -36,7 +36,9 @@ namespace dksave
 				KERBAL_LOG_WRITE(KDEBUG, "Handling color frame. camera: {}, frame_count: {}", camera.device_name(),
 								 ctx.frame_count);
 				try {
-					ctx.handle_color(date, timestamp);
+					std::filesystem::path camera_working_dir(dksave::global_settings::get_working_dir() / camera.device_name());
+					std::filesystem::path filename_color = camera_working_dir / "rgb" / date / (timestamp + ".png");
+					ctx.handle_color(filename_color);
 					KERBAL_LOG_WRITE(KVERBOSE, "Color frame handled success. camera: {}, frame_count: {}",
 									 camera.device_name(),
 									 ctx.frame_count);
@@ -76,7 +78,10 @@ namespace dksave
 				KERBAL_LOG_WRITE(KDEBUG, "Handling depth frame. camera: {}, frame_count: {}", camera.device_name(),
 								 ctx.frame_count);
 				try {
-					ctx.handle_depth(date, timestamp);
+					std::filesystem::path camera_working_dir(dksave::global_settings::get_working_dir() / camera.device_name());
+					std::filesystem::path filename_depth = camera_working_dir / "depth" / date / (timestamp + ".png");
+					std::filesystem::path filename_pcloud = camera_working_dir / "clouds" / date / (timestamp + ".ply");
+					ctx.handle_depth(filename_depth, filename_pcloud);
 					KERBAL_LOG_WRITE(KVERBOSE, "Depth frame handled success. camera: {}, frame_count: {}",
 									 camera.device_name(),
 									 ctx.frame_count);

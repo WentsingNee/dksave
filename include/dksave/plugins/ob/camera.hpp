@@ -209,12 +209,6 @@ namespace dksave::plugins_ob
 			dksave::plugins_ob::camera * camera;
 
 		private:
-			std::filesystem::path camera_working_dir;
-
-			std::filesystem::path path_base_color = camera_working_dir / "rgb";
-			std::filesystem::path path_base_depth = camera_working_dir / "depth";
-			std::filesystem::path path_base_depth_clouds = camera_working_dir / "clouds";
-
 			std::shared_ptr<ob::FrameSet> frame_set;
 
 			struct RGB_frame_to_cv_mat_context
@@ -235,9 +229,8 @@ namespace dksave::plugins_ob
 			int frame_count = 0;
 
 		public:
-			capture_loop_context(class camera * camera, std::filesystem::path const & working_dir) :
-				camera(camera),
-				camera_working_dir(working_dir / this->camera->device_name())
+			capture_loop_context(class camera * camera) :
+				camera(camera)
 			{
 			}
 
@@ -251,7 +244,7 @@ namespace dksave::plugins_ob
 			}
 
 		public:
-			void handle_color(std::string const & date, std::string const & timestamp)
+			void handle_color(std::filesystem::path const & filename_rgb)
 			{
 				if (!frame_set) {
 					return;
@@ -287,7 +280,6 @@ namespace dksave::plugins_ob
 									 camera->device_name());
 					return;
 				}
-				std::filesystem::path filename_rgb = path_base_color / date / (timestamp + ".png");
 				try {
 					save_cv_mat(*color_mat, filename_rgb);
 				} catch (...) {
@@ -297,7 +289,10 @@ namespace dksave::plugins_ob
 				}
 			}
 
-			void handle_depth(std::string const & date, std::string const & timestamp)
+			void handle_depth(
+				std::filesystem::path const & filename_depth,
+				std::filesystem::path const & /*filename_pcloud*/
+			)
 			{
 				if (!frame_set) {
 					return;
@@ -312,7 +307,6 @@ namespace dksave::plugins_ob
 								 depth_frame->format());
 
 				cv::Mat depth_mat(depth_frame->height(), depth_frame->width(), CV_16UC1, depth_frame->data());
-				std::filesystem::path filename_depth = path_base_depth / date / (timestamp + ".png");
 				try {
 					save_cv_mat(depth_mat, filename_depth);
 				} catch (...) {
