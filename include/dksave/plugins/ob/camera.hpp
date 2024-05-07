@@ -45,7 +45,6 @@ namespace dksave::plugins_ob
 		public:
 			using super::device_name;
 			using super::enable;
-			using super::previous_status;
 
 		private:
 			static

@@ -38,10 +38,12 @@ namespace dksave
 
 		private:
 			typename Camera_t::capture_loop_context ctx;
+			working_status previous_status;
 
 		public:
 			mono_camera_scheduler(Camera_t & camera) :
-				ctx(&camera)
+				ctx(&camera),
+				previous_status(working_status::WORK)
 			{
 			}
 
@@ -55,12 +57,12 @@ namespace dksave
 
 					dksave::working_status status = dksave::get_working_status(start_time);
 
-					if (status != camera.previous_status) {
+					if (status != previous_status) {
 						KERBAL_LOG_WRITE(
 							KINFO, "Camera status switched. camera: {}, from: {}, to: {}",
-							camera.device_name(), camera.previous_status, status
+							camera.device_name(), previous_status, status
 						);
-						camera.previous_status = status;
+						previous_status = status;
 					}
 
 					if (status == dksave::working_status::SLEEP) {
