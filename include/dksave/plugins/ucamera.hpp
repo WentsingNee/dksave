@@ -11,8 +11,6 @@
 #ifndef DKSAVE_PLUGINS_UCAMERA_HPP
 #define DKSAVE_PLUGINS_UCAMERA_HPP
 
-#include "dksave/working_status.hpp"
-
 #include <string>
 
 
@@ -25,7 +23,6 @@ namespace dksave
 		protected:
 			std::string k_device_name;
 			bool k_enable;
-			working_status previous_status = working_status::WORK;
 
 		protected:
 			ucamera_base(std::string const & device_name) :
@@ -63,7 +60,6 @@ namespace dksave
 	template <typename Camera>
 	concept ucamera = requires(Camera & camera, Camera const & kcamera)
 	{
-		{ camera.previous_status } -> std::same_as<working_status &>;
 		{ kcamera.device_name() } -> std::convertible_to<std::string>;
 		{ kcamera.enable() } -> std::convertible_to<bool>;
 		{ camera.start() };
