@@ -48,7 +48,6 @@ namespace dksave::plugins_k4a
 		public:
 			using super::device_name;
 			using super::enable;
-			using super::previous_status;
 
 			camera(
 				k4a::device && device,

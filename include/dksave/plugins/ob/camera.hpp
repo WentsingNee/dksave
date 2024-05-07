@@ -42,7 +42,6 @@ namespace dksave::plugins_ob
 		public:
 			using super::device_name;
 			using super::enable;
-			using super::previous_status;
 
 		private:
 			static void show_profiles_supported(std::shared_ptr<ob::StreamProfileList> profile_list)
