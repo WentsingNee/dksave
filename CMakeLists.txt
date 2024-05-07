@@ -33,8 +33,10 @@ add_compile_definitions(NOMINMAX)
 add_executable(dksave src/main.cpp)
 target_include_directories(dksave PUBLIC include)
 
-string(REPLACE "/" "\\\\" DKSAVE_ROOT "${PROJECT_SOURCE_DIR}")
-string(APPEND DKSAVE_ROOT "\\\\")
+set(DKSAVE_ROOT "${PROJECT_SOURCE_DIR}/")
+if (CMAKE_CXX_PLATFORM_ID MATCHES "Windows")
+    string(REPLACE "/" "\\\\" DKSAVE_ROOT "${DKSAVE_ROOT}")
+endif ()
 message(STATUS "DKSAVE_ROOT: ${DKSAVE_ROOT}")
 target_compile_definitions(dksave PUBLIC SOURCE_ROOT="${DKSAVE_ROOT}")
 
