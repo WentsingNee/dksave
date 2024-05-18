@@ -12,7 +12,8 @@
 #define DKSAVE_PLUGINS_OB_CAMERA_HPP
 
 #include "config.hpp"
-#include "context/H264_to_cv_mat_context.hpp"
+#include "context/H264_to_cv_mat_context_t.hpp"
+#include "context/ob_color_frame_to_cv_mat_context_t.hpp"
 
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
@@ -217,19 +218,8 @@ namespace dksave::plugins_ob
 		private:
 			std::shared_ptr<ob::FrameSet> frame_set;
 
-			struct RGB_frame_to_cv_mat_context
-			{
-					cv::Mat cv_mat;
-
-					cv::Mat const & cast(std::shared_ptr<ob::ColorFrame> color_frame)
-					{
-						this->cv_mat = cv::Mat(color_frame->height(), color_frame->width(), CV_8UC3, color_frame->data());
-						cv::cvtColor(this->cv_mat, this->cv_mat, cv::COLOR_RGB2BGR);
-						return this->cv_mat;
-					}
-			} rgb_context;
-
-			H264_to_cv_mat_context h264_context;
+			ob_color_frame_to_cv_mat_context_t ob_color_frame_to_cv_mat_context;
+			H264_to_cv_mat_context_t H264_to_cv_mat_context;
 
 		public:
 			int frame_count = 0;
@@ -270,13 +260,13 @@ namespace dksave::plugins_ob
 					case OB_FORMAT_H264: {
 						KERBAL_LOG_WRITE(KDEBUG, "Color frame dataSize: {}",
 										 color_frame->dataSize());
-						color_mat = &h264_context.decode(reinterpret_cast<std::uint8_t *>(color_frame->data()), color_frame->dataSize());
+						color_mat = &H264_to_cv_mat_context.decode(reinterpret_cast<std::uint8_t *>(color_frame->data()), color_frame->dataSize());
 						KERBAL_LOG_WRITE(KVERBOSE, "Decode color frame from H.264 success. camera: {}",
 										 camera->device_name());
 						break;
 					}
 					case OB_FORMAT_RGB: {
-						color_mat = &rgb_context.cast(color_frame);
+						color_mat = &ob_color_frame_to_cv_mat_context.cast(color_frame);
 						KERBAL_LOG_WRITE(KVERBOSE, "Convert ob::Frame to cv::Mat success. camera: {}",
 										 camera->device_name());
 						break;

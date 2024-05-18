@@ -19,7 +19,7 @@
 
 #if DKSAVE_ENABLE_OB
 
-#	include "dksave/plugins/ob/context/H264_to_cv_mat_context.hpp"
+#	include "dksave/plugins/ob/context/H264_to_cv_mat_context_t.hpp"
 
 #endif
 
