@@ -150,6 +150,7 @@ namespace dksave_ob {
 				cv::Mat const & cast(std::shared_ptr<ob::ColorFrame> color_frame)
 				{
 					this->cv_mat = cv::Mat(color_frame->height(), color_frame->width(), CV_8UC3, color_frame->data());
+					cv::cvtColor(this->cv_mat, this->cv_mat, cv::COLOR_RGB2BGR);
 					return this->cv_mat;
 				}
 			} rgb_context;
