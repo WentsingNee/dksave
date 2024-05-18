@@ -13,6 +13,7 @@
 
 #include "config.hpp"
 #include "context/H264_to_cv_mat_context_t.hpp"
+#include "context/ob_color_frame_to_cv_mat_context_t.hpp"
 
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
@@ -268,23 +269,7 @@ namespace dksave::plugins_ob
 		private:
 			std::shared_ptr<ob::FrameSet> frame_set;
 
-			struct RGB_frame_to_cv_mat_context
-			{
-					cv::Mat cv_mat;
-
-					cv::Mat const & cast(std::shared_ptr<ob::ColorFrame> color_frame)
-					{
-						this->cv_mat = cv::Mat(
-							color_frame->height(),
-							color_frame->width(),
-							CV_8UC3,
-							color_frame->data()
-						);
-						cv::cvtColor(this->cv_mat, this->cv_mat, cv::COLOR_RGB2BGR);
-						return this->cv_mat;
-					}
-			} rgb_context;
-
+			ob_color_frame_to_cv_mat_context_t ob_color_frame_to_cv_mat_context;
 			H264_to_cv_mat_context_t H264_to_cv_mat_context;
 
 		public:
