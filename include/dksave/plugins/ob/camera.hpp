@@ -12,7 +12,7 @@
 #define DKSAVE_PLUGINS_OB_CAMERA_HPP
 
 #include "config.hpp"
-#include "context/H264_to_cv_mat_context.hpp"
+#include "context/H264_to_cv_mat_context_t.hpp"
 
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
@@ -198,7 +198,7 @@ namespace dksave::plugins_ob
 					}
 			} rgb_context;
 
-			H264_to_cv_mat_context h264_context;
+			H264_to_cv_mat_context_t H264_to_cv_mat_context;
 
 		public:
 			int frame_count = 0;
@@ -243,7 +243,7 @@ namespace dksave::plugins_ob
 							KDEBUG, "Color frame dataSize: {}",
 							color_frame->dataSize()
 						);
-						color_mat = &h264_context.decode(
+						color_mat = &H264_to_cv_mat_context.decode(
 							reinterpret_cast<std::uint8_t *>(color_frame->data()),
 							color_frame->dataSize()
 						);
@@ -254,7 +254,7 @@ namespace dksave::plugins_ob
 						break;
 					}
 					case OB_FORMAT_RGB: {
-						color_mat = &rgb_context.cast(color_frame);
+						color_mat = &ob_color_frame_to_cv_mat_context.cast(color_frame);
 						KERBAL_LOG_WRITE(
 							KDEBUG, "Convert ob::Frame to cv::Mat success. camera: {}",
 							camera->device_name()

@@ -1,5 +1,5 @@
 /**
- * @file       H264_to_cv_mat_context.hpp
+ * @file       H264_to_cv_mat_context_t.hpp
  * @brief
  * @date       2023-10-14
  * @author     Wentsing Nee
@@ -10,8 +10,8 @@
  *      Implement of this file partially references the code: [](https://github.com/hirorogithub/ffmpeg_sample-H264_to_cv-Mat)
  */
 
-#ifndef DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_HPP
-#define DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_HPP
+#ifndef DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_T_HPP
+#define DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_T_HPP
 
 #include "kerbal/container/vector.hpp"
 
@@ -150,11 +150,11 @@ namespace dksave::plugins_ob
 			}
 	};
 
-	class H264_to_cv_mat_context
+	class H264_to_cv_mat_context_t
 	{
 
 		public :
-			H264_to_cv_mat_context();
+			H264_to_cv_mat_context_t();
 
 			cv::Mat const & decode(unsigned char * input_buff, size_t size);
 
@@ -171,7 +171,7 @@ namespace dksave::plugins_ob
 			cv::Mat cv_mat;
 	};
 
-	H264_to_cv_mat_context::H264_to_cv_mat_context()
+	H264_to_cv_mat_context_t::H264_to_cv_mat_context_t()
 	{
 		this->av_codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (nullptr == this->av_codec) {
@@ -218,7 +218,7 @@ namespace dksave::plugins_ob
 
 
 	cv::Mat const &
-	H264_to_cv_mat_context::decode(std::uint8_t * input_buff, size_t size)
+	H264_to_cv_mat_context_t::decode(std::uint8_t * input_buff, size_t size)
 	{
 		if (0 == size) {
 			throw H264_decode_error("Size is zero");
@@ -298,4 +298,4 @@ namespace dksave::plugins_ob
 
 } // namespace dksave::plugins_ob
 
-#endif // DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_HPP
+#endif // DKSAVE_PLUGINS_OB_CONTEXT_H264_TO_CV_MAT_CONTEXT_T_HPP
