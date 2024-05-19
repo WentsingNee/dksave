@@ -14,6 +14,8 @@
 #include "config.hpp"
 #include "context/H264_to_cv_mat_context_t.hpp"
 #include "context/ob_color_frame_to_cv_mat_context_t.hpp"
+#include "context/ob_frame_depth_to_cv_mat_context_t.hpp"
+#include "context/ob_img_depth_transform_to_color_mode_context_t.hpp"
 
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
@@ -39,6 +41,8 @@ namespace dksave::plugins_ob
 			std::shared_ptr<ob::Device> k_device;
 			std::shared_ptr<ob::Config> config;
 			std::shared_ptr<ob::Pipeline> pipeline;
+			ob_camera_configuration config_rgb;
+			ob_camera_configuration config_depth;
 
 		public:
 			using super::device_name;
@@ -106,7 +110,9 @@ namespace dksave::plugins_ob
 				super(device_name),
 				k_device(std::move(device)),
 				config(std::make_shared<ob::Config>()),
-				pipeline(std::make_shared<ob::Pipeline>(this->device()))
+				pipeline(std::make_shared<ob::Pipeline>(this->device())),
+				config_rgb(config_rgb),
+				config_depth(config_depth)
 			{
 				KERBAL_LOG_WRITE(KINFO, "Creating camera. camera: {}", this->device_name());
 				this->enable_color_stream(config, config_rgb);
@@ -220,6 +226,8 @@ namespace dksave::plugins_ob
 
 			ob_color_frame_to_cv_mat_context_t ob_color_frame_to_cv_mat_context;
 			H264_to_cv_mat_context_t H264_to_cv_mat_context;
+			ob_img_depth_transform_to_color_mode_context_t ob_img_depth_transform_to_color_mode_context;
+			ob_frame_depth_to_cv_mat_context_t ob_frame_depth_to_cv_mat_context;
 
 		public:
 			int frame_count = 0;
@@ -319,11 +327,47 @@ namespace dksave::plugins_ob
 								 depth_frame->format()
 				);
 
-				cv::Mat depth_mat(depth_frame->height(), depth_frame->width(), CV_16UC1, depth_frame->data());
+				std::shared_ptr<ob::Frame> transformed_frame = nullptr;
+				int color_height = this->camera->config_rgb.height;
+				int color_width = this->camera->config_rgb.width;
+
+				cv::Mat depth_mat;
+				if (true) {
+					try {
+						transformed_frame = this->ob_img_depth_transform_to_color_mode_context.transform(
+							this->camera->device(), depth_frame,
+							color_height, color_width
+						);
+					} catch (std::exception const & e) {
+						KERBAL_LOG_WRITE(KERROR, "Transforming depth image to color type failed. camera: {}, exception type: {}, what: {}",
+										 camera->device_name(),
+										 typeid(e).name(),
+										 e.what()
+						);
+						throw;
+					} catch (...) {
+						KERBAL_LOG_WRITE(KERROR, "Transforming depth image to color type failed. camera: {}, exception type: unknown",
+										 filename_depth.string()
+						);
+						throw;
+					}
+
+					KERBAL_LOG_WRITE(KVERBOSE, "Transforming depth image to color type success. camera: {}",
+									 camera->device_name()
+					);
+
+					depth_mat = ob_frame_depth_to_cv_mat_context.transform(
+						transformed_frame,
+						color_height, color_width
+					);
+				} else {
+					depth_mat = cv::Mat(depth_frame->height(), depth_frame->width(), CV_16UC1, depth_frame->data());
+				}
+
 				try {
 					save_cv_mat(depth_mat, filename_depth);
 				} catch (std::exception const & e) {
-					KERBAL_LOG_WRITE(KERROR, "Depth image saved failed. camera: {}, filename_rgb: {}, exception type: {}, what: {}",
+					KERBAL_LOG_WRITE(KERROR, "Depth image saved failed. camera: {}, filename_depth: {}, exception type: {}, what: {}",
 									 camera->device_name(),
 									 filename_depth.string(),
 									 typeid(e).name(),
