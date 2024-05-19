@@ -237,7 +237,12 @@ namespace dksave::plugins_ob
 
 			void open_local_cameras()
 			{
+				KERBAL_LOG_WRITE(KINFO, "Try opening local cameras.");
 				YAML::Node local_cameras_node = cameras_node["local"];
+				if (!local_cameras_node.IsDefined()) {
+					KERBAL_LOG_WRITE(KWARNING, "Local cameras node is not defined.");
+					return;
+				}
 
 				auto device_list = ctx.queryDeviceList();
 
@@ -249,32 +254,51 @@ namespace dksave::plugins_ob
 
 				for (uint32_t i = 0; i < device_count; ++i) {
 					KERBAL_LOG_WRITE(KINFO, "Try opening local camera. index: {}", i);
-					auto device = device_list->getDevice(i);
-					auto device_info = device->getDeviceInfo();
-					std::string serial_num = device_info->serialNumber();
+					try {
+						auto device = device_list->getDevice(i);
+						auto device_info = device->getDeviceInfo();
+						std::string serial_num = device_info->serialNumber();
 
-					KERBAL_LOG_WRITE(
-						KINFO, "Serial number of camara is fetched. deployment: {}, serial_num: {}",
-						"local", serial_num
-					);
-
-					YAML::Node camera_node = local_cameras_node[serial_num];
-					if (!camera_node.IsDefined()) {
 						KERBAL_LOG_WRITE(
-							KERROR,
-							"Configuration of the camera is not specified, this camera will be ignored. deployment: {}, serial_num: {}",
+							KINFO, "Serial number of camara is fetched. deployment: {}, serial_num: {}",
 							"local", serial_num
 						);
-						continue;
-					}
 
-					config_camera(device, camera_node, "local", serial_num);
+						YAML::Node camera_node = local_cameras_node[serial_num];
+						if (!camera_node.IsDefined()) {
+							KERBAL_LOG_WRITE(
+								KERROR,
+								"Configuration of the camera is not specified, this camera will be ignored. deployment: {}, serial_num: {}",
+								"local", serial_num
+							);
+							continue;
+						}
+
+						config_camera(device, camera_node, "local", serial_num);
+					} catch (std::exception const & e) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Opening local camera failed. index: {}, exception type: {}, what: {}",
+							i,
+							typeid(e).name(), e.what()
+						);
+					} catch (...) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Opening local camera failed. index: {}, exception type: unknown",
+							i
+						);
+					}
 				}
+				KERBAL_LOG_WRITE(KINFO, "Try opening local cameras done.");
 			}
 
 			void open_network_cameras()
 			{
+				KERBAL_LOG_WRITE(KINFO, "Try opening network cameras.");
 				YAML::Node network_cameras_node = cameras_node["network"];
+				if (!network_cameras_node.IsDefined()) {
+					KERBAL_LOG_WRITE(KWARNING, "Network cameras node is not defined.");
+					return;
+				}
 				for (auto const & e : network_cameras_node) {
 					auto const & device_ip_node = e.first;
 					auto const & v = e.second;
@@ -303,6 +327,7 @@ namespace dksave::plugins_ob
 
 					config_camera(device, v, "network", device_ip);
 				}
+				KERBAL_LOG_WRITE(KINFO, "Try opening network cameras done.");
 			}
 
 	};
