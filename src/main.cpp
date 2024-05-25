@@ -109,7 +109,7 @@ int main(int argc, char * argv[]) try
 				threads.emplace_back([&camera]() {
 					using camera_t = std::remove_reference_t<decltype(camera)>;
 					dksave::mono_camera_scheduler<camera_t> scheduler(camera);
-					scheduler.thread();
+					scheduler.thread(4);
 				});
 			} else {
 				auto & group_ = std::get<1>(group);

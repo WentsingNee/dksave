@@ -25,6 +25,10 @@
 
 #include <chrono>
 #include <thread>
+#include <atomic>
+#include <condition_variable>
+
+#include <kerbal/container/vector.hpp>
 
 
 namespace dksave
@@ -37,20 +41,46 @@ namespace dksave
 			using scheduler_base = dksave::scheduler_base<Camera_t>;
 
 		private:
-			typename Camera_t::capture_loop_context ctx;
+			Camera_t * const camera;
 			working_status previous_status;
 
 		public:
 			mono_camera_scheduler(Camera_t & camera) :
-				ctx(&camera),
+				camera(&camera),
 				previous_status(working_status::WORK)
 			{
 			}
 
-			void thread()
+			void thread(std::size_t worker_cnt = 4)
 			{
-				Camera_t & camera = *(ctx.camera);
-				while (true) {
+				kerbal::container::vector<std::thread> workers;
+
+				std::condition_variable cv;
+				std::mutex mtx;
+				bool ready = false;
+				bool exit = false;
+
+				for (std::size_t i = 0; i < worker_cnt; ++i) {
+					workers.emplace_back([this, i, &cv, &mtx, &ready, &exit]() {
+						typename Camera_t::capture_loop_context ctx(camera);
+						while (true) {
+							std::unique_lock<std::mutex> lock(mtx);
+							cv.wait(lock, [&ready, &exit]() {
+								return exit || ready;
+							});
+							ready = false;
+							if (exit) {
+								KERBAL_LOG_WRITE(KINFO, "Worker exit. camera: {}, worker id: {}", camera->device_name(), i);
+								return ;
+							}
+
+							one_capture(ctx, lock);
+						}
+					});
+				}
+
+				Camera_t & camera = *(this->camera);
+				while (!exit) {
 					using namespace std::chrono_literals;
 
 					auto start_time = std::chrono::system_clock::now();
@@ -102,30 +132,30 @@ namespace dksave
 						}
 					}
 
-#		if DKSAVE_ENABLE_OB
-					try {
-#		endif
-						one_capture();
-#		if DKSAVE_ENABLE_OB
-					} catch (dksave::plugins_ob::H264_decode_error const & e) {
-						KERBAL_LOG_WRITE(
-							KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
-							camera.device_name(),
-							ctx.frame_count
-						);
-						continue;
+					{
+						std::lock_guard guard(mtx);
+						ready = true;
 					}
-#		endif
+					KERBAL_LOG_WRITE(KDEBUG, "Notifying worker thread. camera: {}", camera.device_name());
+					cv.notify_one();
 
+					KERBAL_LOG_WRITE(KDEBUG, "Start sleep. camera: {}", camera.device_name());
 					std::this_thread::sleep_until(start_time + dksave::global_settings::get_sleep_period());
+					KERBAL_LOG_WRITE(KDEBUG, "End sleep. camera: {}", camera.device_name());
+				}
+
+				for (auto & worker : workers) {
+					worker.join();
 				}
 			}
 
-			void one_capture()
+			static
+			void one_capture(typename Camera_t::capture_loop_context & ctx, std::unique_lock<std::mutex> & lock)
 			{
 				Camera_t & camera = *(ctx.camera);
 				try {
 					ctx.do_capture();
+					lock.unlock();
 
 					auto capture_time = std::chrono::system_clock::now();
 					std::string date = dksave::format_systime_to_date(capture_time);
