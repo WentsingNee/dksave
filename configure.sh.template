@@ -11,6 +11,5 @@ C:/Program Files/PCL 1.13.1/;\
 C:/Users/Peter/Downloads/OrbbecSDK_C_C++_v1.7.4_20230913_c948fa476_win_x64_release/OrbbecSDK_v1.7.4/SDK/lib;\
 C:/Users/Peter/Downloads/OrbbecSDK_C_C++_v1.7.4_20230913_c948fa476_win_x64_release/OrbbecSDK_v1.7.4/SDK/include;\
 " \
-  -DDKSAVE_ENABLE_K4A=ON -DDKSAVE_ENABLE_OB=ON
--DCMAKE_TOOLCHAIN_FILE=C:\Users\Peter\open_source\git\vcpkg\scripts\buildsystems\vcpkg.cmake
-
+  -DDKSAVE_ENABLE_K4A=ON -DDKSAVE_ENABLE_OB=ON \
+  -DCMAKE_TOOLCHAIN_FILE=C:\Users\Peter\open_source\git\vcpkg\scripts\buildsystems\vcpkg.cmake
