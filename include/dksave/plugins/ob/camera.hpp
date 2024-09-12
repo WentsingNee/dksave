@@ -18,6 +18,7 @@
 #include "context/ob_img_depth_transform_to_color_mode_context_t.hpp"
 
 #include "dksave/logger.hpp"
+#include "dksave/registration_mode_t.hpp"
 #include "dksave/save_cv_mat.hpp"
 #include "dksave/plugins/ucamera.hpp"
 
@@ -131,10 +132,11 @@ namespace dksave::plugins_ob
 			camera(
 				std::shared_ptr<ob::Device> && device,
 				std::string const & device_name,
+				registration_mode_t registration_mode,
 				ob_camera_configuration const & config_rgb,
 				ob_camera_configuration const & config_depth
 			) :
-				super(device_name),
+				super(device_name, registration_mode),
 				k_device(std::move(device)),
 				config(std::make_shared<ob::Config>()),
 				pipeline(std::make_shared<ob::Pipeline>(this->device())),
@@ -399,7 +401,7 @@ namespace dksave::plugins_ob
 				int color_width = this->camera->config_rgb.width;
 
 				cv::Mat depth_mat;
-				if (true) {
+				if (camera->registration_mode() == registration_mode_t::DEPTH_TO_COLOR) {
 					try {
 						transformed_frame = this->ob_img_depth_transform_to_color_mode_context.transform(
 							this->camera->device(), depth_frame,

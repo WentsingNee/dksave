@@ -17,6 +17,7 @@
 #include "dksave/plugins/ucamera_factory.hpp"
 #include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
+#include "dksave/registration_mode_t.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -231,7 +232,12 @@ namespace dksave::plugins_ob
 				}
 
 				KERBAL_LOG_WRITE(KINFO, "Appending camera into cameras list. device_name: {}", device_name);
-				cameras.emplace_back(std::move(device), device_name, config_rgb, config_depth);
+				cameras.emplace_back(
+					std::move(device),
+					device_name,
+					registration_mode_t::DEPTH_TO_COLOR,
+					config_rgb, config_depth
+				);
 				KERBAL_LOG_WRITE(KINFO, "Appending camera into cameras list success. device_name: {}", device_name);
 			}
 

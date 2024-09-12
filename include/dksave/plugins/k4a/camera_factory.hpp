@@ -17,6 +17,7 @@
 #include "dksave/plugins/ucamera_factory.hpp"
 #include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
+#include "dksave/registration_mode_t.hpp"
 
 #include <string>
 #include <variant>
@@ -211,13 +212,75 @@ namespace dksave::plugins_k4a
 							exit(EXIT_FAILURE);
 						}
 
+						YAML::Node registration_mode_node = camera_node["registration_mode"];
+						registration_mode_t registration_mode = registration_mode_t::DEPTH_TO_COLOR;
+						if (config.color_resolution == K4A_COLOR_RESOLUTION_OFF || config.depth_mode == K4A_DEPTH_MODE_OFF) {
+							registration_mode = registration_mode_t::KEEP;
+						}
+						if (!registration_mode_node.IsDefined()) {
+							KERBAL_LOG_WRITE(
+								KWARNING, "There is no registration_mode in yaml, set default to: {}. serial_num: {}, device_name: {}",
+								registration_mode,
+								serial_num, device_name
+							);
+						} else {
+							try {
+								registration_mode = str_to_registration_mode(registration_mode_node.as<std::string>().c_str());
+							} catch (std::exception const & e) {
+								KERBAL_LOG_WRITE(
+									KFATAL, "Parsing registration_mode failed. serial_num: {}, device_name: {}, exception_type: {}, what: {}",
+									serial_num, device_name,
+									typeid(e).name(), e.what()
+								);
+								exit(EXIT_FAILURE);
+							} catch (...) {
+								KERBAL_LOG_WRITE(
+									KFATAL, "Parsing registration_mode failed. serial_num: {}, device_name: {}, exception_type: unknown",
+									serial_num, device_name
+								);
+								exit(EXIT_FAILURE);
+							}
+							KERBAL_LOG_WRITE(
+								KINFO, "Set registration_mode to: {}. serial_num: {}, device_name: {}",
+								registration_mode,
+								serial_num, device_name
+							);
+						}
+
+						if (config.color_resolution == K4A_COLOR_RESOLUTION_OFF) {
+							if (registration_mode == registration_mode_t::DEPTH_TO_COLOR) {
+								KERBAL_LOG_WRITE(
+									KFATAL, "Invalid registration_mode because color frame is disabled. serial_num: {}, device_name: {}, registration_mode: {}",
+									serial_num, device_name,
+									registration_mode
+								);
+								exit(EXIT_FAILURE);
+							}
+						}
+
+						if (config.depth_mode == K4A_DEPTH_MODE_OFF) {
+							if (registration_mode == registration_mode_t::COLOR_TO_DEPTH) {
+								KERBAL_LOG_WRITE(
+									KFATAL, "Invalid registration_mode because depth frame is disabled. serial_num: {}, device_name: {}, registration_mode: {}",
+									serial_num, device_name,
+									registration_mode
+								);
+								exit(EXIT_FAILURE);
+							}
+						}
+
 						KERBAL_LOG_WRITE(
 							KINFO,
 							"Open the {}-th camera with arg: serial_num: {}, config: {}, device_name: {}",
 							i,
 							serial_num, config, device_name
 						);
-						cameras.emplace_back(std::move(device), device_name, config);
+						cameras.emplace_back(
+							std::move(device),
+							device_name,
+							registration_mode,
+							config
+						);
 					} catch (std::exception const & e) {
 						KERBAL_LOG_WRITE(
 							KERROR, "Camara {} open failed. exception type: {}, what: {}", i,

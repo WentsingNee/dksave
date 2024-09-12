@@ -12,12 +12,14 @@
 #define DKSAVE_PLUGINS_K4A_CAMERA_HPP
 
 #include "context/k4a_img_color_to_cv_mat_context_t.hpp"
+#include "context/k4a_img_color_transform_to_depth_mode_context_t.hpp"
 #include "context/k4a_img_depth_transform_to_color_mode_context_t.hpp"
 #include "context/k4a_img_depth_to_cv_mat_context_t.hpp"
 #include "context/k4a_img_depth_transform_to_point_cloud_mode_context_t.hpp"
 #include "context/k4a_img_point_cloud_to_pcl_point_cloud_context_t.hpp"
 
 #include "dksave/logger.hpp"
+#include "dksave/registration_mode_t.hpp"
 #include "dksave/save_cv_mat.hpp"
 #include "dksave/plugins/ucamera.hpp"
 
@@ -82,9 +84,10 @@ namespace dksave::plugins_k4a
 			camera(
 				k4a::device && device,
 				std::string const & device_name,
+				registration_mode_t registration_mode,
 				k4a_device_configuration_t config
 			) :
-				super(device_name),
+				super(device_name, registration_mode),
 				k_device(std::move(device)),
 				k_config(std::move(config))
 			{
@@ -324,6 +327,7 @@ namespace dksave::plugins_k4a
 			dksave::plugins_k4a::camera * camera;
 
 		private:
+			k4a_img_color_transform_to_depth_mode_context_t k4a_img_color_transform_to_depth_mode_context;
 			k4a_img_color_to_cv_mat_context_t k4a_img_color_to_cv_mat_context;
 
 			k4a_img_depth_transform_to_color_mode_context_t k4a_img_depth_transform_to_color_mode_context;
@@ -391,8 +395,34 @@ namespace dksave::plugins_k4a
 				}
 
 				k4a::image k4a_img_color = capture.get_color_image();
+				k4a::image const * k4a_img_color_transformed = nullptr;
+				if (camera->registration_mode() == registration_mode_t::COLOR_TO_DEPTH) {
+					k4a::image k4a_img_depth = capture.get_depth_image();
+					try {
+						k4a_img_color_transformed = &k4a_img_color_transform_to_depth_mode_context.transform(
+							transformation,
+							k4a_img_depth,
+							k4a_img_color
+						);
+					} catch (std::exception const & e) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Transforming color image to depth failed. camera: {}, exception_type: {}, what: {}",
+							camera->device_name(),
+							typeid(e).name(), e.what()
+						);
+						return;
+					} catch (...) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Transforming color image to depth failed. camera: {}, exception_type: unknown",
+							camera->device_name()
+						);
+						return;
+					}
+				} else {
+					k4a_img_color_transformed = &k4a_img_color;
+				}
 
-				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(k4a_img_color);
+				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(*k4a_img_color_transformed);
 				try {
 					save_cv_mat(cv_color_img_without_alpha, filename_color);
 				} catch (std::exception const & e) {
@@ -425,27 +455,51 @@ namespace dksave::plugins_k4a
 				}
 
 				k4a::image k4a_img_depth = capture.get_depth_image();
-				k4a::image * k4a_img_depth_transformed_to_color = nullptr;
-				try {
-					k4a_img_depth_transformed_to_color = &k4a_img_depth_transform_to_color_mode_context.transform(
-						transformation, k4a_img_depth);
-				} catch (std::exception const & e) {
+				k4a::image const * k4a_img_depth_transformed = nullptr;
+
+				bool enable_registration = camera->registration_mode() == registration_mode_t::DEPTH_TO_COLOR || DKSAVE_ENABLE_PCL;
+				if (camera->config().color_resolution == K4A_COLOR_RESOLUTION_OFF) {
+					enable_registration = false;
+				}
+				if (enable_registration) {
+					// 如需转化为点云，则必须先向可见光配准
+					try {
+						k4a_img_depth_transformed = &k4a_img_depth_transform_to_color_mode_context.transform(
+							transformation,
+							k4a_img_depth
+						);
+					} catch (std::exception const & e) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Transforming depth image to color failed. camera: {}, exception_type: {}, what: {}",
+							camera->device_name(),
+							typeid(e).name(), e.what()
+						);
+						return;
+					} catch (...) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Transforming depth image to color failed. camera: {}, exception_type: unknown",
+							camera->device_name()
+						);
+						return;
+					}
+
 					KERBAL_LOG_WRITE(
-						KERROR, "Depth image transformation to color failed. camera: {}, exception_type: {}, what: {}",
-						camera->device_name(),
-						typeid(e).name(), e.what()
-					);
-					return;
-				} catch (...) {
-					KERBAL_LOG_WRITE(
-						KERROR, "Depth image transformation to color failed. camera: {}, exception_type: unknown",
+						KVERBOSE, "Transforming depth image to color type success. camera: {}",
 						camera->device_name()
 					);
-					return;
 				}
 
-				const cv::Mat & cv_depth_img = k4a_img_to_cv_mat_depth_context.convert(
-					*k4a_img_depth_transformed_to_color
+				k4a::image const * k4a_img_depth_outputted = nullptr;
+				if (
+					camera->registration_mode() == registration_mode_t::DEPTH_TO_COLOR &&
+					nullptr != k4a_img_depth_transformed
+				) {
+					k4a_img_depth_outputted = k4a_img_depth_transformed;
+				} else {
+					k4a_img_depth_outputted = &k4a_img_depth;
+				}
+
+				const cv::Mat & cv_depth_img = k4a_img_to_cv_mat_depth_context.convert(*k4a_img_depth_outputted
 				);
 				try {
 					save_cv_mat(cv_depth_img, filename_depth);
@@ -465,18 +519,20 @@ namespace dksave::plugins_k4a
 				}
 
 #if DKSAVE_ENABLE_PCL
-				const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed_to_color);
-				const pcl::PointCloud<pcl::PointXYZ> & pcl_point_cloud = k4a_img_point_cloud_to_pcl_point_cloud_context.convert(k4a_img_point_cloud);
-				try {
-					std::filesystem::create_directories(filename_pcloud.parent_path());
-					pcl::io::savePLYFile(filename_pcloud.string(), pcl_point_cloud);
-					KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_pcloud.string());
-				} catch (...) {
-					KERBAL_LOG_WRITE(
-						KERROR, "Camera {}: depth clouds saved failed: {}",
-						camera->device_name(),
-						filename_depth.string()
-					);
+				if (nullptr != k4a_img_depth_transformed) {
+					const k4a::image & k4a_img_point_cloud = k4a_img_depth_transform_to_point_cloud_mode_context.transform(transformation, *k4a_img_depth_transformed);
+					const pcl::PointCloud<pcl::PointXYZ> & pcl_point_cloud = k4a_img_point_cloud_to_pcl_point_cloud_context.convert(k4a_img_point_cloud);
+					try {
+						std::filesystem::create_directories(filename_pcloud.parent_path());
+						pcl::io::savePLYFile(filename_pcloud.string(), pcl_point_cloud);
+						KERBAL_LOG_WRITE(KINFO, "Saved {}", filename_pcloud.string());
+					} catch (...) {
+						KERBAL_LOG_WRITE(
+							KERROR, "Camera {}: depth clouds saved failed: {}",
+							camera->device_name(),
+							filename_depth.string()
+						);
+					}
 				}
 #endif
 			}

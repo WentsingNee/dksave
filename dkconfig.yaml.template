@@ -62,6 +62,11 @@ config:
         # 比如 device_name 为 camera0 的相机的采集数据就保存在 working_dir/camera0 下
         # 唯一要求是每台相机的 device_name 禁止有重名
         config: *k4a_camera_config_0
+        registration_mode: DEPTH_TO_COLOR
+        # 配准模式，可以填的值有：[DEPTH_TO_COLOR, COLOR_TO_DEPTH, KEEP]，
+        # 如果未定义此项则按照以下规则设置默认值：
+        #    如果 color 与 depth 均不为 OFF, 则设为：DEPTH_TO_COLOR
+        #    否则设为：KEEP
     sync_groups:
       "001098311912":
         - "000211303912"
