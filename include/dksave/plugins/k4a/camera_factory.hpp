@@ -66,7 +66,9 @@ namespace dksave::plugins_k4a
 				parse_field(config_yaml, config, "color_resolution", &k4a_device_configuration_t::color_resolution, str_to_color_resolution);
 				parse_field(config_yaml, config, "depth_mode", &k4a_device_configuration_t::depth_mode, str_to_depth_mode);
 
-				config.synchronized_images_only = true; // ensures that depth and color images are both available in the capture
+				if (config.color_resolution != K4A_COLOR_RESOLUTION_OFF && config.depth_mode != K4A_DEPTH_MODE_OFF) {
+					config.synchronized_images_only = true; // ensures that depth and color images are both available in the capture
+				}
 
 				return config;
 			}
@@ -198,6 +200,14 @@ namespace dksave::plugins_k4a
 						auto uir = dksave::global_settings::add_device_name_occupied(device_name);
 						if (!uir.insert_happen()) {
 							KERBAL_LOG_WRITE(KFATAL, "device_name: {} has been occupied.", device_name);
+							exit(EXIT_FAILURE);
+						}
+
+						if (config.color_resolution == K4A_COLOR_RESOLUTION_OFF && config.depth_mode == K4A_DEPTH_MODE_OFF) {
+							KERBAL_LOG_WRITE(
+								KFATAL, "Invalid config because both color frame and depth frame are disabled. serial_num: {}, device_name: {}",
+								serial_num, device_name
+							);
 							exit(EXIT_FAILURE);
 						}
 

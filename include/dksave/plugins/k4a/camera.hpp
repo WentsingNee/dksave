@@ -386,6 +386,10 @@ namespace dksave::plugins_k4a
 					return;
 				}
 
+				if (camera->config().color_resolution == K4A_COLOR_RESOLUTION_OFF) {
+					return;
+				}
+
 				k4a::image k4a_img_color = capture.get_color_image();
 
 				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(k4a_img_color);
@@ -413,6 +417,10 @@ namespace dksave::plugins_k4a
 			)
 			{
 				if (!capture) {
+					return;
+				}
+
+				if (camera->config().depth_mode == K4A_DEPTH_MODE_OFF) {
 					return;
 				}
 
