@@ -11,6 +11,7 @@
 #ifndef DKSAVE_PLUGINS_UCAMERA_HPP
 #define DKSAVE_PLUGINS_UCAMERA_HPP
 
+#include "dksave/registration_mode_t.hpp"
 #include "dksave/working_status.hpp"
 
 #include <string>
@@ -24,11 +25,16 @@ namespace dksave
 
 		protected:
 			std::string k_device_name;
+			registration_mode_t k_registration_mode;
 			bool k_enable;
 
 		protected:
-			ucamera_base(std::string const & device_name) :
+			ucamera_base(
+				std::string const & device_name,
+				registration_mode_t registration_mode
+			) :
 				k_device_name(device_name),
+				k_registration_mode(registration_mode),
 				k_enable(false)
 			{
 			}
@@ -37,6 +43,12 @@ namespace dksave
 			std::string const & device_name() const
 			{
 				return k_device_name;
+			}
+
+			registration_mode_t
+			registration_mode() const noexcept
+			{
+				return k_registration_mode;
 			}
 
 			bool enable() const
