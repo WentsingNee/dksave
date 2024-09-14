@@ -17,7 +17,9 @@
 #include "context/ob_frame_depth_to_cv_mat_context_t.hpp"
 #include "context/ob_img_depth_transform_to_color_mode_context_t.hpp"
 
+#include "dksave/context/image_rotate_context_t.hpp"
 #include "dksave/logger.hpp"
+#include "dksave/rotate_flag_t.hpp"
 #include "dksave/registration_mode_t.hpp"
 #include "dksave/save_cv_mat.hpp"
 #include "dksave/plugins/ucamera.hpp"
@@ -136,7 +138,7 @@ namespace dksave::plugins_ob
 				ob_camera_configuration const & config_rgb,
 				ob_camera_configuration const & config_depth
 			) :
-				super(device_name, registration_mode),
+				super(device_name, rotate_flag_t::CLOCKWISE_0, registration_mode),
 				k_device(std::move(device)),
 				config(std::make_shared<ob::Config>()),
 				pipeline(std::make_shared<ob::Pipeline>(this->device())),
@@ -279,8 +281,11 @@ namespace dksave::plugins_ob
 
 			ob_color_frame_to_cv_mat_context_t ob_color_frame_to_cv_mat_context;
 			H264_to_cv_mat_context_t H264_to_cv_mat_context;
+			image_rotate_context_t cv_mat_color_rotate_context;
+
 			ob_img_depth_transform_to_color_mode_context_t ob_img_depth_transform_to_color_mode_context;
 			ob_frame_depth_to_cv_mat_context_t ob_frame_depth_to_cv_mat_context;
+			image_rotate_context_t cv_mat_depth_rotate_context;
 
 		public:
 			int frame_count = 0;
@@ -357,6 +362,12 @@ namespace dksave::plugins_ob
 					);
 					throw std::runtime_error("color_mat is null.");
 				}
+
+				cv::Mat const & cv_color_img_rotated = cv_mat_color_rotate_context.rotate(
+					*color_mat, camera->rotate_flag()
+				);
+				color_mat = &cv_color_img_rotated;
+
 				try {
 					save_cv_mat(*color_mat, filename_rgb);
 				} catch (std::exception const & e) {
@@ -439,6 +450,12 @@ namespace dksave::plugins_ob
 						depth_frame->data()
 					);
 				}
+
+				const cv::Mat & cv_depth_img_rotated = cv_mat_depth_rotate_context.rotate(
+					depth_mat, camera->rotate_flag()
+				);
+				depth_mat = cv_depth_img_rotated;
+
 				try {
 					save_cv_mat(depth_mat, filename_depth);
 				} catch (std::exception const & e) {

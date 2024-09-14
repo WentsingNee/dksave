@@ -18,6 +18,7 @@
 #include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
 #include "dksave/registration_mode_t.hpp"
+#include "dksave/rotate_flag_t.hpp"
 
 #include <string>
 #include <variant>
@@ -72,6 +73,41 @@ namespace dksave::plugins_k4a
 				}
 
 				return config;
+			}
+
+			static
+			rotate_flag_t parse_yaml_to_rotate_flag(YAML::Node const & rotate_yaml)
+			{
+				if (!rotate_yaml.IsDefined()) {
+					rotate_flag_t default_ = rotate_flag_t::CLOCKWISE_0;
+					KERBAL_LOG_WRITE(
+						KWARNING, "There is no `rotate` property in yaml, set default to: {}.",
+						default_
+					);
+					return default_;
+				}
+				std::string s;
+				try {
+					s = rotate_yaml.as<std::string>();
+				} catch (YAML::InvalidNode const & e) {
+					KERBAL_LOG_WRITE(KERROR, "Invalid node. what: {}", e.what());
+					throw;
+				}
+				if (s == "CLOCKWISE_0") {
+					return rotate_flag_t::CLOCKWISE_0;
+				}
+				if (s == "CLOCKWISE_90") {
+					return rotate_flag_t::CLOCKWISE_90;
+				}
+				if (s == "CLOCKWISE_180") {
+					return rotate_flag_t::CLOCKWISE_180;
+				}
+				if (s == "CLOCKWISE_270") {
+					return rotate_flag_t::CLOCKWISE_270;
+				}
+				std::string errmsg("Invalid `rotate` property, must be one of: [CLOCKWISE_0, CLOCKWISE_0, CLOCKWISE_0, CLOCKWISE_0]");
+				KERBAL_LOG_WRITE(KERROR, "{}", errmsg);
+				throw std::invalid_argument(errmsg);
 			}
 
 		public:
@@ -212,6 +248,8 @@ namespace dksave::plugins_k4a
 							exit(EXIT_FAILURE);
 						}
 
+						dksave::rotate_flag_t rotate_flag = parse_yaml_to_rotate_flag(camera_node["rotate"]);
+
 						YAML::Node registration_mode_node = camera_node["registration_mode"];
 						registration_mode_t registration_mode = registration_mode_t::DEPTH_TO_COLOR;
 						if (config.color_resolution == K4A_COLOR_RESOLUTION_OFF || config.depth_mode == K4A_DEPTH_MODE_OFF) {
@@ -278,6 +316,7 @@ namespace dksave::plugins_k4a
 						cameras.emplace_back(
 							std::move(device),
 							device_name,
+							rotate_flag,
 							registration_mode,
 							config
 						);

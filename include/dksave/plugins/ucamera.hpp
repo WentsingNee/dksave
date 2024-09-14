@@ -11,6 +11,7 @@
 #ifndef DKSAVE_PLUGINS_UCAMERA_HPP
 #define DKSAVE_PLUGINS_UCAMERA_HPP
 
+#include "dksave/rotate_flag_t.hpp"
 #include "dksave/registration_mode_t.hpp"
 #include "dksave/working_status.hpp"
 
@@ -25,15 +26,18 @@ namespace dksave
 
 		protected:
 			std::string k_device_name;
+			rotate_flag_t k_rotate_flag;
 			registration_mode_t k_registration_mode;
 			bool k_enable;
 
 		protected:
 			ucamera_base(
 				std::string const & device_name,
+				rotate_flag_t rotate_flag,
 				registration_mode_t registration_mode
 			) :
 				k_device_name(device_name),
+				k_rotate_flag(rotate_flag),
 				k_registration_mode(registration_mode),
 				k_enable(false)
 			{
@@ -43,6 +47,12 @@ namespace dksave
 			std::string const & device_name() const
 			{
 				return k_device_name;
+			}
+
+			dksave::rotate_flag_t
+			rotate_flag() const noexcept
+			{
+				return k_rotate_flag;
 			}
 
 			registration_mode_t
