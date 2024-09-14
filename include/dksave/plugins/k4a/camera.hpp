@@ -14,8 +14,6 @@
 #include "context/k4a_img_color_to_cv_mat_context_t.hpp"
 #include "context/k4a_img_depth_transform_to_color_mode_context_t.hpp"
 #include "context/k4a_img_depth_to_cv_mat_context_t.hpp"
-#include "context/k4a_img_depth_transform_to_point_cloud_mode_context_t.hpp"
-#include "context/k4a_img_point_cloud_to_pcl_point_cloud_context_t.hpp"
 
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
@@ -31,6 +29,9 @@
 
 // PCL
 #if DKSAVE_ENABLE_PCL
+#	include "context/k4a_img_depth_transform_to_point_cloud_mode_context_t.hpp"
+#	include "context/k4a_img_point_cloud_to_pcl_point_cloud_context_t.hpp"
+
 #	include <pcl/io/ply_io.h>
 #endif
 
@@ -148,9 +149,9 @@ namespace dksave::plugins_k4a
 
 			k4a_img_depth_transform_to_color_mode_context_t k4a_img_depth_transform_to_color_mode_context;
 			k4a_img_depth_to_cv_mat_context_t k4a_img_to_cv_mat_depth_context;
-			k4a_img_depth_transform_to_point_cloud_mode_context_t k4a_img_depth_transform_to_point_cloud_mode_context;
 
 #if DKSAVE_ENABLE_PCL
+			k4a_img_depth_transform_to_point_cloud_mode_context_t k4a_img_depth_transform_to_point_cloud_mode_context;
 			k4a_img_point_cloud_to_pcl_point_cloud_context_t k4a_img_point_cloud_to_pcl_point_cloud_context;
 #endif
 
