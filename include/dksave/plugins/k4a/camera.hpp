@@ -16,10 +16,12 @@
 #include "context/k4a_img_depth_transform_to_color_mode_context_t.hpp"
 #include "context/k4a_img_depth_to_cv_mat_context_t.hpp"
 
+#include "dksave/context/image_rotate_context_t.hpp"
 #include "dksave/logger.hpp"
 #include "dksave/save_cv_mat.hpp"
 #include "dksave/plugins/ucamera.hpp"
 #include "dksave/registration_mode_t.hpp"
+#include "dksave/rotate_flag_t.hpp"
 
 #include <chrono>
 #include <string>
@@ -56,10 +58,11 @@ namespace dksave::plugins_k4a
 			camera(
 				k4a::device && device,
 				std::string const & device_name,
+				rotate_flag_t rotate_flag,
 				registration_mode_t registration_mode,
 				k4a_device_configuration_t config
 			) :
-				super(device_name, registration_mode),
+				super(device_name, rotate_flag, registration_mode),
 				k_device(std::move(device)),
 				k_config(std::move(config))
 			{
@@ -194,8 +197,11 @@ namespace dksave::plugins_k4a
 		private:
 			k4a_img_color_transform_to_depth_mode_context_t k4a_img_color_transform_to_depth_mode_context;
 			k4a_img_color_to_cv_mat_context_t k4a_img_color_to_cv_mat_context;
+			image_rotate_context_t cv_mat_color_rotate_context;
+
 			k4a_img_depth_transform_to_color_mode_context_t k4a_img_depth_transform_to_color_mode_context;
 			k4a_img_depth_to_cv_mat_context_t k4a_img_to_cv_mat_depth_context;
+			image_rotate_context_t cv_mat_depth_rotate_context;
 
 #if DKSAVE_ENABLE_PCL
 			k4a_img_depth_transform_to_point_cloud_mode_context_t k4a_img_depth_transform_to_point_cloud_mode_context;
@@ -285,8 +291,12 @@ namespace dksave::plugins_k4a
 				}
 
 				const cv::Mat & cv_color_img_without_alpha = k4a_img_color_to_cv_mat_context.convert(*k4a_img_color_transformed);
+				const cv::Mat & cv_color_img_rotated = cv_mat_color_rotate_context.rotate(
+					cv_color_img_without_alpha, camera->rotate_flag()
+				);
+
 				try {
-					save_cv_mat(cv_color_img_without_alpha, filename_color);
+					save_cv_mat(cv_color_img_rotated, filename_color);
 				} catch (std::exception const & e) {
 					KERBAL_LOG_WRITE(KERROR, "RGB image saved failed. camera: {}, filename: {}, exception_type: {}, what: {}",
 									 camera->device_name(),
@@ -359,8 +369,12 @@ namespace dksave::plugins_k4a
 				}
 
 				const cv::Mat & cv_depth_img = k4a_img_to_cv_mat_depth_context.convert(*k4a_img_depth_outputted);
+				const cv::Mat & cv_depth_img_rotated = cv_mat_depth_rotate_context.rotate(
+					cv_depth_img, camera->rotate_flag()
+				);
+
 				try {
-					save_cv_mat(cv_depth_img, filename_depth);
+					save_cv_mat(cv_depth_img_rotated, filename_depth);
 				} catch (std::exception const & e) {
 					KERBAL_LOG_WRITE(KERROR, "Depth image saved failed. camera: {}, filename: {}, exception_type: {}, what: {}",
 									 camera->device_name(),
