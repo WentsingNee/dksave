@@ -27,8 +27,10 @@
 #include <kerbal/container/vector.hpp>
 
 #include <chrono>
+#include <condition_variable>
 #include <thread>
 #include <memory>
+#include <mutex>
 
 
 namespace dksave
@@ -42,28 +44,27 @@ namespace dksave
 			using capture_loop_context = typename Camera_t::capture_loop_context;
 
 		private:
-			kerbal::container::vector<std::unique_ptr<capture_loop_context> > ctx_group;
+			kerbal::container::vector<Camera_t *> cameras;
 			working_status group_previous_status;
-			kerbal::container::vector<bool> capture_success_flags;
+			std::string master_name;
 
 		public:
 			sync_group_scheduler(kerbal::container::vector<Camera_t> & group) :
 				group_previous_status(working_status::SLEEP),
-				capture_success_flags(group.size(), false)
+				master_name(group[0].device_name())
 			{
 				for (auto & camera : group) {
-					ctx_group.emplace_back(std::make_unique<capture_loop_context>(&camera));
+					cameras.emplace_back(&camera);
 				}
 			}
 
 			void group_start() try
 			{
 				// 同步工作方式启动设备时，应先启动从机，最后启动主机
-				std::size_t i = this->ctx_group.size();
+				std::size_t i = this->cameras.size();
 				while (i != 0) {
 					--i;
-					auto & ctx = *(this->ctx_group[i]);
-					Camera_t & camera = *(ctx.camera);
+					Camera_t & camera = *this->cameras[i];
 					KERBAL_LOG_WRITE(KINFO, "Starting camera. camera: {}", camera.device_name());
 					try {
 						camera.start();
@@ -80,11 +81,9 @@ namespace dksave
 
 			void group_stop() noexcept
 			{
-				Camera_t & master_camera = *this->ctx_group.front()->camera;
-				KERBAL_LOG_WRITE(KINFO, "Stopping the group. master_camera: {}", master_camera.device_name());
-				for (std::size_t i = 0; i < this->ctx_group.size(); ++i) {
-					auto & ctx = *(this->ctx_group[i]);
-					Camera_t & camera = *(ctx.camera);
+				KERBAL_LOG_WRITE(KINFO, "Stopping the group. master_camera: {}", master_name);
+				for (std::size_t i = 0; i < this->cameras.size(); ++i) {
+					Camera_t & camera = *this->cameras[i];
 					KERBAL_LOG_WRITE(KINFO, "Stopping the camera. camera: {}", camera.device_name());
 					camera.stop();
 				}
@@ -92,9 +91,8 @@ namespace dksave
 
 			void group_stabilize() try
 			{
-				for (std::size_t i = 0; i < this->ctx_group.size(); ++i) {
-					auto & ctx = *(this->ctx_group[i]);
-					Camera_t & camera = *(ctx.camera);
+				for (std::size_t i = 0; i < this->cameras.size(); ++i) {
+					Camera_t & camera = *this->cameras[i];
 					KERBAL_LOG_WRITE(KINFO, "Stabilizing the camera. camera: {}", camera.device_name());
 					try {
 						camera.stabilize();
@@ -112,18 +110,64 @@ namespace dksave
 				throw;
 			}
 
-			void thread()
+			void thread(std::size_t worker_cnt = 4)
 			{
+				kerbal::container::vector<std::thread> workers;
+
+				std::condition_variable cv;
+				std::mutex mtx;
+				bool ready = false;
+				bool exit = false;
+
+				for (std::size_t i = 0; i < worker_cnt; ++i) {
+					workers.emplace_back([this, i, &cv, &mtx, &ready, &exit]() {
+						kerbal::container::vector<bool> capture_success_flags(cameras.size(), false);
+						kerbal::container::vector<std::unique_ptr<capture_loop_context> > ctx_group;
+						for (std::size_t camera_i = 0; camera_i < cameras.size(); ++camera_i) {
+							ctx_group.emplace_back(std::make_unique<capture_loop_context>(cameras[camera_i]));
+						}
+
+						while (true) {
+							std::unique_lock<std::mutex> lock(mtx);
+							cv.wait(lock, [&ready, &exit]() {
+								return exit || ready;
+							});
+							ready = false;
+							if (exit) {
+								KERBAL_LOG_WRITE(KINFO, "Worker exit. camera: {}, worker id: {}", master_name, i);
+								return ;
+							}
+
+#			if DKSAVE_ENABLE_OB
+							try {
+#			endif
+								one_capture(capture_success_flags, ctx_group, lock);
+#			if DKSAVE_ENABLE_OB
+							} catch (dksave::plugins_ob::H264_decode_error const & e) {
+								KERBAL_LOG_WRITE(
+									KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
+									master_name,
+									-1/*ctx.frame_count*/
+								);
+								continue;
+							}
+#			endif
+
+						}
+
+					});
+				}
+
 				while (true) {
 					auto start_time = std::chrono::system_clock::now();
 
 					dksave::working_status status = dksave::get_working_status(start_time);
-					Camera_t & master_camera = *this->ctx_group.front()->camera;
+					Camera_t & master_camera = *this->cameras[0];
 
 					if (status != group_previous_status) {
 						KERBAL_LOG_WRITE(
 							KINFO, "Camera status switched. master camera: {}, from: {}, to: {}",
-							master_camera.device_name(), group_previous_status, status
+							master_name, group_previous_status, status
 						);
 						group_previous_status = status;
 					}
@@ -132,7 +176,7 @@ namespace dksave
 						if (master_camera.enable()) {
 							KERBAL_LOG_WRITE(
 								KINFO, "Camera fall in sleep. master_camera: {}",
-								master_camera.device_name()
+								master_name
 							);
 							group_stop();
 						}
@@ -143,18 +187,18 @@ namespace dksave
 							// 启动设备
 							KERBAL_LOG_WRITE(
 								KINFO, "Group is sleeping, try to wake up... . master_camera: {}",
-								master_camera.device_name()
+								master_name
 							);
 							try {
 								group_start();
 								KERBAL_LOG_WRITE(
 									KINFO, "Group has been started. master_camera: {}",
-									master_camera.device_name()
+									master_name
 								);
 							} catch (...) {
 								KERBAL_LOG_WRITE(
 									KERROR, "Group starts failed. master_camera: {}, next try period: 30s",
-									master_camera.device_name()
+									master_name
 								);
 								std::this_thread::sleep_for(30s);
 								continue;
@@ -162,17 +206,17 @@ namespace dksave
 							try {
 								KERBAL_LOG_WRITE(
 									KINFO, "Stabilizing the group. master_camera: {}",
-									master_camera.device_name()
+									master_name
 								);
 								group_stabilize();
 								KERBAL_LOG_WRITE(
 									KINFO, "Group has been stabilized. master_camera: {}",
-									master_camera.device_name()
+									master_name
 								);
 							} catch (...) {
 								KERBAL_LOG_WRITE(
 									KERROR, "Stabilizing the group failed. master_camera: {}, next try period: 30s",
-									master_camera.device_name()
+									master_name
 								);
 								std::this_thread::sleep_for(30s);
 								continue;
@@ -180,20 +224,12 @@ namespace dksave
 						}
 					}
 
-#			if DKSAVE_ENABLE_OB
-					try {
-#			endif
-						one_capture();
-#			if DKSAVE_ENABLE_OB
-					} catch (dksave::plugins_ob::H264_decode_error const & e) {
-						KERBAL_LOG_WRITE(
-							KDEBUG, "Color frame decode from H.264 failed, retrying immediately. camera: {}, frame_count: {}",
-							master_camera.device_name(),
-							-1/*ctx.frame_count*/
-						);
-						continue;
+					{
+						std::lock_guard guard(mtx);
+						ready = true;
 					}
-#			endif
+					KERBAL_LOG_WRITE(KDEBUG, "Notifying worker thread. master_camera: {}", master_name);
+					cv.notify_one();
 
 					std::this_thread::sleep_until(start_time + global_settings::get_sleep_period());
 				}
@@ -201,12 +237,15 @@ namespace dksave
 
 		private:
 
-			void one_capture()
+			void one_capture(
+				kerbal::container::vector<bool> & capture_success_flags,
+				kerbal::container::vector<std::unique_ptr<capture_loop_context> > & ctx_group,
+				std::unique_lock<std::mutex> & lock
+			)
 			{
-				kerbal::algorithm::fill(capture_success_flags.begin(), capture_success_flags.end(), false);
 
-				for (std::size_t i = 0; i < this->ctx_group.size(); ++i) {
-					auto & ctx = *(this->ctx_group[i]);
+				for (std::size_t i = 0; i < ctx_group.size(); ++i) {
+					auto & ctx = *(ctx_group[i]);
 					Camera_t & camera = *(ctx.camera);
 					try {
 						ctx.do_capture();
@@ -232,16 +271,18 @@ namespace dksave
 					}
 				}
 
+				lock.unlock();
+
 				auto capture_time = std::chrono::system_clock::now();
 				std::string date = dksave::format_systime_to_date(capture_time);
 				std::string timestamp = dksave::format_systime_to_datetime_milli(capture_time);
 
-				for (std::size_t i = 0; i < this->ctx_group.size(); ++i) {
+				for (std::size_t i = 0; i < ctx_group.size(); ++i) {
 					if (false == capture_success_flags[i]) {
 						continue;
 					}
 
-					auto & ctx = *(this->ctx_group[i]);
+					auto & ctx = *(ctx_group[i]);
 					Camera_t & camera = *(ctx.camera);
 					try {
 
