@@ -26,6 +26,7 @@
 #include <chrono>
 #include <string>
 #include <filesystem>
+#include <fmt/format.h>
 
 // Kinect DK
 #include <k4a/k4a.hpp>

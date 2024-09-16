@@ -19,6 +19,7 @@
 #include <string>
 
 #include <ctre.hpp>
+#include <fmt/format.h>
 #include <kerbal/container/avl_set.hpp>
 #include <yaml-cpp/yaml.h>
 

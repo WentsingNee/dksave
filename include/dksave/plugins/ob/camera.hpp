@@ -28,6 +28,7 @@
 #include <string>
 #include <filesystem>
 
+#include <fmt/format.h>
 #include <libobsensor/ObSensor.hpp>
 #include <opencv2/core.hpp>
 

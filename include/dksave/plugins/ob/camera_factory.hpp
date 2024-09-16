@@ -25,6 +25,7 @@
 #include <cstdlib>
 
 #include <ctre.hpp>
+#include <fmt/format.h>
 #include <libobsensor/ObSensor.hpp>
 #include <yaml-cpp/yaml.h>
 
