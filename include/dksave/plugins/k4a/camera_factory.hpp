@@ -26,6 +26,7 @@
 #include <cstdlib>
 
 #include <k4a/k4a.hpp>
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <yaml-cpp/yaml.h>
 

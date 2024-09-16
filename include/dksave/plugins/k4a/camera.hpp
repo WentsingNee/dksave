@@ -30,6 +30,7 @@
 // Kinect DK
 #include <k4a/k4a.hpp>
 
+#include <fmt/format.h>
 #include <opencv2/core/mat.hpp>
 
 // PCL
