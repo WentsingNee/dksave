@@ -35,6 +35,33 @@
 #endif
 
 
+template<>
+struct fmt::formatter<k4a_calibration_type_t> :
+	public fmt::formatter<std::string>
+{
+		static
+		char const *
+		k4a_calibration_type_t2_str(k4a_calibration_type_t c)
+		{
+			switch (c) {
+				case K4A_CALIBRATION_TYPE_UNKNOWN: return "K4A_CALIBRATION_TYPE_UNKNOWN";
+				case K4A_CALIBRATION_TYPE_DEPTH: return "K4A_CALIBRATION_TYPE_DEPTH";
+				case K4A_CALIBRATION_TYPE_COLOR: return "K4A_CALIBRATION_TYPE_COLOR";
+				case K4A_CALIBRATION_TYPE_GYRO: return "K4A_CALIBRATION_TYPE_GYRO";
+				case K4A_CALIBRATION_TYPE_ACCEL: return "K4A_CALIBRATION_TYPE_ACCEL";
+				case K4A_CALIBRATION_TYPE_NUM: return "K4A_CALIBRATION_TYPE_NUM";
+			}
+			return "ERROR";
+		}
+
+	public:
+		auto format(k4a_calibration_type_t c, format_context & ctx) const
+		{
+			return fmt::formatter<std::string>::format(k4a_calibration_type_t2_str(c), ctx);
+		}
+};
+
+
 namespace dksave::plugins_k4a
 {
 
@@ -73,53 +100,160 @@ namespace dksave::plugins_k4a
 				return k_config;
 			}
 
-			void print_intrinsic() const
+		private:
+			std::string k_format_intrinsic(k4a_calibration_camera_t const & calib) const
 			{
-				k4a_calibration_camera_t calib = this->k_device.get_calibration(
+				std::string s;
+
+				fmt::format_to(
+					std::back_inserter(s),
+					"        resolution: {{\n"
+					"            width: {}\n"
+					"            height: {}\n"
+					"        }}\n",
+					calib.resolution_width,
+					calib.resolution_height
+				);
+				fmt::format_to(
+					std::back_inserter(s),
+					"        principal point: {{\n"
+					"            x: {}\n"
+					"            y: {}\n"
+					"        }}\n",
+					calib.intrinsics.parameters.param.cx,
+					calib.intrinsics.parameters.param.cy
+				);
+				fmt::format_to(
+					std::back_inserter(s),
+					"        focal length: {{\n"
+					"            x: {}\n"
+					"            y: {}\n"
+					"        }}\n",
+					calib.intrinsics.parameters.param.fx,
+					calib.intrinsics.parameters.param.fy
+				);
+				fmt::format_to(
+					std::back_inserter(s),
+					"        radial distortion coefficients: {{\n"
+					"            k1: {}\n"
+					"            k2: {}\n"
+					"            k3: {}\n"
+					"            k4: {}\n"
+					"            k5: {}\n"
+					"            k6: {}\n"
+					"        }}\n",
+					calib.intrinsics.parameters.param.k1,
+					calib.intrinsics.parameters.param.k2,
+					calib.intrinsics.parameters.param.k3,
+					calib.intrinsics.parameters.param.k4,
+					calib.intrinsics.parameters.param.k5,
+					calib.intrinsics.parameters.param.k6
+				);
+				fmt::format_to(
+					std::back_inserter(s),
+					"        center of distortion in Z=1 plane: {{\n"
+					"            x: {}\n"
+					"            y: {}\n"
+					"        }}\n",
+					calib.intrinsics.parameters.param.codx,
+					calib.intrinsics.parameters.param.cody
+				);
+				fmt::format_to(
+					std::back_inserter(s),
+					"        tangential distortion coefficient: {{\n"
+					"            x: {}\n"
+					"            y: {}\n"
+					"        }}\n",
+					calib.intrinsics.parameters.param.p1,
+					calib.intrinsics.parameters.param.p2
+				);
+				fmt::format_to(
+					std::back_inserter(s),
+					"        metric radius: {}\n",
+					calib.intrinsics.parameters.param.metric_radius
+				);
+				return s;
+			}
+
+			std::string k_format_extrinsics(
+				k4a_calibration_extrinsics_t const (&matrix)[K4A_CALIBRATION_TYPE_NUM][K4A_CALIBRATION_TYPE_NUM]
+			) const
+			{
+				std::string s = "        extrinsics_index:\n";
+				for (int i = 0; i < K4A_CALIBRATION_TYPE_NUM; ++i) {
+					fmt::format_to(
+						std::back_inserter(s),
+						"            {}: {}\n", i, k4a_calibration_type_t(i)
+					);
+				}
+				for (int i = 0; i < K4A_CALIBRATION_TYPE_NUM; ++i) {
+					for (int j = 0; j < K4A_CALIBRATION_TYPE_NUM; ++j) {
+						auto const & e = matrix[i][j];
+						auto format_rotation = [&]() {
+							auto r = e.rotation;
+							fmt::format_to(
+								std::back_inserter(s),
+								"            rotation: {{\n"
+								"                {{{}, {}, {}}},\n"
+								"                {{{}, {}, {}}},\n"
+								"                {{{}, {}, {}}}\n"
+								"            }}\n",
+								r[0], r[1], r[2],
+								r[3], r[4], r[5],
+								r[6], r[7], r[8]
+							);
+						};
+						fmt::format_to(
+							std::back_inserter(s),
+							"        ({}, {})\n",
+							i, j
+						);
+						format_rotation();
+						fmt::format_to(
+							std::back_inserter(s),
+							"            translation: {{{}, {}, {}}} T\n",
+							e.translation[0],
+							e.translation[1],
+							e.translation[2]
+						);
+					}
+				}
+				return s;
+			}
+
+		public:
+
+			void print_calibration_information() const
+			{
+				auto calib = this->k_device.get_calibration(
 					this->k_config.depth_mode,
 					this->k_config.color_resolution
-				).depth_camera_calibration;
+				);
+				k4a_calibration_camera_t color_calib = calib.color_camera_calibration;
+				k4a_calibration_camera_t depth_calib = calib.depth_camera_calibration;
+				auto const & extrinsics = calib.extrinsics;
 
-				auto s =
-					fmt::format("device: {}\n", this->k_device.get_serialnum()) +
-					fmt::format("resolution:\n"
-								"    width: {}, height: {}\n",
-								calib.resolution_width,
-								calib.resolution_height
-					) +
-					fmt::format("principal point:\n"
-								"    x: {}\n"
-								"    y: {}\n",
-								calib.intrinsics.parameters.param.cx,
-								calib.intrinsics.parameters.param.cy
-					) +
-					fmt::format("focal length:\n"
-								"    x: {}\n"
-								"    y: {}\n",
-								calib.intrinsics.parameters.param.fx,
-								calib.intrinsics.parameters.param.fy
-					) +
-					fmt::format("radial distortion coefficients:\n") +
-					fmt::format("    k1: {}\n", calib.intrinsics.parameters.param.k1) +
-					fmt::format("    k2: {}\n", calib.intrinsics.parameters.param.k2) +
-					fmt::format("    k3: {}\n", calib.intrinsics.parameters.param.k3) +
-					fmt::format("    k4: {}\n", calib.intrinsics.parameters.param.k4) +
-					fmt::format("    k5: {}\n", calib.intrinsics.parameters.param.k5) +
-					fmt::format("    k6: {}\n", calib.intrinsics.parameters.param.k6) +
-					fmt::format("center of distortion in Z=1 plane\n"
-								"    x: {}\n"
-								"    y: {}\n",
-								calib.intrinsics.parameters.param.codx,
-								calib.intrinsics.parameters.param.cody
-					) +
-					fmt::format("tangential distortion coefficient\n"
-								"    x: {}\n"
-								"    y: {}\n",
-								calib.intrinsics.parameters.param.p1,
-								calib.intrinsics.parameters.param.p2
-					) +
-					fmt::format("metric radius: {}\n", calib.intrinsics.parameters.param.metric_radius);
-				KERBAL_LOG_WRITE(KINFO, "intrinsic:\n{}", s);
+				std::string s;
+				fmt::format_to(
+					std::back_inserter(s),
+					"calibration information: {{\n"
+					"    device: {}\n"
+					"    color_camera_calibration intrinsic: {{\n"
+					"{}"
+					"    }}\n"
+					"    depth_camera_calibration intrinsic: {{\n"
+					"{}"
+					"    }}\n"
+					"    extrinsics: {{\n"
+					"{}"
+					"    }}\n"
+					"}}",
+					this->k_device.get_serialnum(),
+					this->k_format_intrinsic(color_calib),
+					this->k_format_intrinsic(depth_calib),
+					this->k_format_extrinsics(extrinsics)
+				);
+				KERBAL_LOG_WRITE(KINFO, "\n{}", s);
 			}
 
 			void start() try
@@ -127,7 +261,7 @@ namespace dksave::plugins_k4a
 				k_device.start_cameras(&k_config);
 				k_enable = true;
 				KERBAL_LOG_WRITE(KINFO, "Start camera {}.", k_device_name);
-				this->print_intrinsic();
+				this->print_calibration_information();
 			} catch (...) {
 				k_enable = false;
 				throw;
