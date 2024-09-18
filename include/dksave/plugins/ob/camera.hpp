@@ -131,7 +131,7 @@ namespace dksave::plugins_ob
 				return k_device;
 			}
 
-			void print_intrinsic() const
+			void print_calibration_information() const
 			{
 				auto calib = this->k_device->getCalibrationCameraParamList();
 				auto paramGroupCount = calib->count();
@@ -194,7 +194,7 @@ namespace dksave::plugins_ob
 			{
 				pipeline->start(config);
 				this->k_enable = true;
-				this->print_intrinsic();
+				this->print_calibration_information();
 			}
 
 			void stabilize()
