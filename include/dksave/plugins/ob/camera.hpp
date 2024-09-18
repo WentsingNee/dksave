@@ -26,6 +26,7 @@
 #include <libobsensor/ObSensor.hpp>
 #include <opencv2/core.hpp>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 
 namespace dksave::plugins_ob
@@ -145,7 +146,58 @@ namespace dksave::plugins_ob
 				return k_device;
 			}
 
-			void print_intrinsic() const
+		private:
+			static
+			void k_format_intrinsic(std::string & s, auto const & intrinsic, char const * header)
+			{
+				fmt::format_to(
+					std::back_inserter(s),
+					"	{}:\n"
+					"		fx: {}\n"
+					"		fy: {}\n"
+					"		cx: {}\n"
+					"		cy: {}\n"
+					"		width: {}\n"
+					"		height: {}\n",
+					header,
+					intrinsic.fx,
+					intrinsic.fy,
+					intrinsic.cx,
+					intrinsic.cy,
+					intrinsic.width,
+					intrinsic.height
+				);
+			}
+
+			static
+			void k_format_distortion(std::string & s, auto const & distortion, char const * header)
+			{
+				fmt::format_to(
+					std::back_inserter(s),
+					"	{}:\n"
+					"		k1: {}\n"
+					"		k2: {}\n"
+					"		k3: {}\n"
+					"		k4: {}\n"
+					"		k5: {}\n"
+					"		k6: {}\n"
+					"		p1: {}\n"
+					"		p2: {}\n",
+					header,
+					distortion.k1,
+					distortion.k2,
+					distortion.k3,
+					distortion.k4,
+					distortion.k5,
+					distortion.k6,
+					distortion.p1,
+					distortion.p2
+				);
+			}
+
+		public:
+
+			void print_calibration_information() const
 			{
 				auto calib = this->k_device->getCalibrationCameraParamList();
 				auto paramGroupCount = calib->count();
@@ -155,51 +207,24 @@ namespace dksave::plugins_ob
 
 				for (auto i = 0u; i < paramGroupCount; ++i) {
 					auto cameraParam = calib->getCameraParam(i);
-					auto rgbIntrinsic = cameraParam.rgbIntrinsic;
-					auto rgbDistortion = cameraParam.rgbDistortion;
-					auto depthIntrinsic = cameraParam.depthIntrinsic;
-					auto depthDistortion = cameraParam.depthDistortion;
 					auto transform = cameraParam.transform;
 
-					s +=
-						fmt::format("the {}-st param:\n", i) +
-						fmt::format("	isMirrored: {}\n", cameraParam.isMirrored) +
-						fmt::format("	rgbIntrinsic:\n") +
-						fmt::format("		fx: {}\n", rgbIntrinsic.fx) +
-						fmt::format("		fy: {}\n", rgbIntrinsic.fy) +
-						fmt::format("		cx: {}\n", rgbIntrinsic.cx) +
-						fmt::format("		cy: {}\n", rgbIntrinsic.cy) +
-						fmt::format("		width: {}\n", rgbIntrinsic.width) +
-						fmt::format("		height: {}\n", rgbIntrinsic.height) +
-						fmt::format("	rgbDistortion:\n") +
-						fmt::format("		k1: {}\n", rgbDistortion.k1) +
-						fmt::format("		k2: {}\n", rgbDistortion.k2) +
-						fmt::format("		k3: {}\n", rgbDistortion.k3) +
-						fmt::format("		k4: {}\n", rgbDistortion.k4) +
-						fmt::format("		k5: {}\n", rgbDistortion.k5) +
-						fmt::format("		k6: {}\n", rgbDistortion.k6) +
-						fmt::format("		p1: {}\n", rgbDistortion.p1) +
-						fmt::format("		p2: {}\n", rgbDistortion.p2) +
-						fmt::format("	depthIntrinsic:\n") +
-						fmt::format("		fx: {}\n", depthIntrinsic.fx) +
-						fmt::format("		fy: {}\n", depthIntrinsic.fy) +
-						fmt::format("		cx: {}\n", depthIntrinsic.cx) +
-						fmt::format("		cy: {}\n", depthIntrinsic.cy) +
-						fmt::format("		width: {}\n", depthIntrinsic.width) +
-						fmt::format("		height: {}\n", depthIntrinsic.height) +
-						fmt::format("	depthDistortion:\n") +
-						fmt::format("		k1: {}\n", depthDistortion.k1) +
-						fmt::format("		k2: {}\n", depthDistortion.k2) +
-						fmt::format("		k3: {}\n", depthDistortion.k3) +
-						fmt::format("		k4: {}\n", depthDistortion.k4) +
-						fmt::format("		k5: {}\n", depthDistortion.k5) +
-						fmt::format("		k6: {}\n", depthDistortion.k6) +
-						fmt::format("		p1: {}\n", depthDistortion.p1) +
-						fmt::format("		p2: {}\n", depthDistortion.p2) +
-						fmt::format("	transform:\n") +
-						fmt::format("		rot: {}\n", transform.rot) +
-						fmt::format("		trans: {}\n", transform.trans)
-					;
+					fmt::format_to(std::back_inserter(s), "the {}-st param:\n", i);
+					fmt::format_to(std::back_inserter(s), "	isMirrored: {}\n", cameraParam.isMirrored);
+
+					k_format_intrinsic(s, cameraParam.rgbIntrinsic, "rgbIntrinsic");
+					k_format_distortion(s, cameraParam.rgbDistortion, "rgbDistortion");
+					k_format_intrinsic(s, cameraParam.depthIntrinsic, "depthIntrinsic");
+					k_format_distortion(s, cameraParam.depthDistortion, "depthDistortion");
+
+					fmt::format_to(
+						std::back_inserter(s),
+						"	transform:\n"
+						"		rot: {}\n"
+						"		trans: {}\n",
+						transform.rot,
+						transform.trans
+					);
 				}
 				KERBAL_LOG_WRITE(KINFO, "intrinsic:\n{}", s);
 			}
@@ -208,7 +233,7 @@ namespace dksave::plugins_ob
 			{
 				pipeline->start(config);
 				this->k_enable = true;
-				this->print_intrinsic();
+				this->print_calibration_information();
 			}
 
 			void stabilize()
