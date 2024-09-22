@@ -8,20 +8,6 @@
  *   all rights reserved
  */
 
-#if DKSAVE_ENABLE_K4A
-#	include "dksave/plugins/k4a/camera_factory.hpp"
-#endif
-
-#if DKSAVE_ENABLE_OB
-#	include "dksave/plugins/ob/camera_factory.hpp"
-#endif
-
-#include "dksave/plugins/ucamera_factory.hpp"
-
-#include "dksave/scheduler/mono_camera_scheduler.hpp"
-#include "dksave/scheduler/sync_group_scheduler.hpp"
-
-#include "dksave/global_settings.hpp"
 #include "dksave/logger.hpp"
 
 #include <chrono>
@@ -41,6 +27,22 @@
 
 #include <kerbal/container/vector.hpp>
 #include <kerbal/utility/tuple.hpp>
+
+
+#if DKSAVE_ENABLE_K4A
+import dksave.plugins.k4a.camera_factory;
+#endif
+
+#if DKSAVE_ENABLE_OB
+import dksave.plugins.ob.camera_factory;
+#endif
+
+import dksave.plugins.ucamera_factory;
+import dksave.scheduler.mono_camera_scheduler;
+import dksave.scheduler.sync_group_scheduler;
+
+import dksave.logger;
+import dksave.global_settings;
 
 
 int main(int argc, char * argv[]) try

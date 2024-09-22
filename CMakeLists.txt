@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.28)
 
 option(DKSAVE_ENABLE_K4A "enable k4a cameras support" OFF)
 option(DKSAVE_ENABLE_OB "enable ob cameras support" OFF)
@@ -23,6 +23,7 @@ project(
 )
 
 set(CMAKE_CXX_STANDARD 20)
+message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_CXX_PLATFORM_ID: ${CMAKE_CXX_PLATFORM_ID}")
 message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
@@ -30,8 +31,9 @@ message(STATUS "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
 add_compile_definitions(NOMINMAX)
 
 
-add_executable(dksave src/main.cpp)
+add_executable(dksave)
 target_include_directories(dksave PUBLIC include)
+add_subdirectory(src)
 
 set(DKSAVE_ROOT "${PROJECT_SOURCE_DIR}/")
 if (CMAKE_CXX_PLATFORM_ID MATCHES "Windows")
