@@ -270,6 +270,8 @@ namespace dksave::plugins_k4a
 			// 稳定化
 			void stabilize(int failed_total = 10, int success_total = 30) try
 			{
+				using namespace std::chrono_literals;
+
 				k4a::capture capture;
 				int success = 0;
 				int failed = 0;

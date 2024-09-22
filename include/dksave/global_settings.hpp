@@ -34,9 +34,9 @@ namespace dksave
 
 		private:
 			static inline std::filesystem::path working_dir;
-			static inline std::chrono::milliseconds sleep_period = 48ms;
-			static inline std::chrono::milliseconds frame_handle_timeout_rgb = 150ms;
-			static inline std::chrono::milliseconds frame_handle_timeout_depth = 150ms;
+			static inline std::chrono::milliseconds sleep_period{48};
+			static inline std::chrono::milliseconds frame_handle_timeout_rgb{150};
+			static inline std::chrono::milliseconds frame_handle_timeout_depth{150};
 			static inline kerbal::container::avl_set<std::string> device_name_occupied;
 
 		public:
