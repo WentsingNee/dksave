@@ -36,7 +36,11 @@ namespace dksave::plugins_k4a
 					k4a_img_ir.get_height_pixels(),
 					k4a_img_ir.get_width_pixels(),
 					CV_16U,
-					reinterpret_cast<void *>(k4a_img_ir.get_buffer())
+					const_cast<void *>(
+						reinterpret_cast<void const *>(
+							k4a_img_ir.get_buffer()
+						)
+					)
 				);
 				this->cv_ir_16u.convertTo(this->cv_ir_8u, CV_8U);
 				return this->cv_ir_8u;
