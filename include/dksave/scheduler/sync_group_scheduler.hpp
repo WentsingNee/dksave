@@ -114,6 +114,8 @@ namespace dksave
 
 			void thread()
 			{
+				using namespace std::chrono_literals;
+
 				while (true) {
 					auto start_time = std::chrono::system_clock::now();
 

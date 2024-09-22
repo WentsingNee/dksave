@@ -16,11 +16,9 @@
 #include <fmt/format.h>
 
 
-using namespace std::chrono_literals;
-
 inline std::chrono::seconds start_time;
 inline std::chrono::seconds end_time;
-inline auto prepare_time = 1min;
+inline std::chrono::minutes prepare_time{1};
 
 
 namespace dksave
@@ -36,6 +34,8 @@ namespace dksave
 	static
 	working_status get_working_status(std::chrono::time_point<std::chrono::system_clock> now)
 	{
+		using namespace std::chrono_literals;
+
 		const std::chrono::time_zone * tz = std::chrono::current_zone();
 		auto local_now = tz->to_local(now);
 		auto today_midnight = std::chrono::floor<std::chrono::days>(local_now);
